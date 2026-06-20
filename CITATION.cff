@@ -9,12 +9,15 @@ abstract: >-
   enforced by a single boundary that produces every export and published view.
 type: software
 authors:
+  - name: "Parallax Agency"
   - family-names: "O'Brien"
     given-names: "Jeff"
     affiliation: "Material / Image Research Lab (MIRL), University of California, Santa Barbara"
-version: "1.0.0"
-date-released: "2026-06-19"
-license: MIT
+version: "1.1.0"
+date-released: "2026-06-20"
+license:
+  - PolyForm-Noncommercial-1.0.0
+  - CC-BY-NC-SA-4.0
 repository-code: "https://github.com/jffobrn/parallax-situated-testimony"
 keywords:
   - situated testimony

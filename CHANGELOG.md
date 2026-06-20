@@ -4,6 +4,16 @@ All notable changes to Situated Testimony are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses semantic
 versioning.
 
+## [1.1.0] - 2026-06-20
+
+### Changed
+
+- Relicensed from MIT to a dual noncommercial licence: the source code is now
+  under the PolyForm Noncommercial License 1.0.0 and the non-code assets under
+  CC BY-NC-SA 4.0. The project is source-available, not open source; commercial
+  use is not granted. Versions released under MIT remain available under MIT.
+- Attribution updated to Parallax Agency and Jeff O'Brien.
+
 ## [1.0.0] - 2026-06-19
 
 First release. The third tool of the Parallax suite.

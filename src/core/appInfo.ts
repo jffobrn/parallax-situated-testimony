@@ -1,7 +1,7 @@
 /** App identity and the standing disclaimers, in one place (shared core). */
 
 export const APP_NAME = 'Situated Testimony'
-export const APP_VERSION = '1.0.0'
+export const APP_VERSION = '1.1.0'
 export const SUITE_NAME = 'Parallax'
 
 export const TAGLINE =
@@ -15,6 +15,6 @@ export const DISCLAIMER =
   'Situated Testimony records a source-tethered account situated in space and time, not legal proof or a verified reconstruction. It documents and corroborates; it does not adjudicate.'
 
 export const AUTHOR = {
-  name: "Jeff O'Brien",
-  affiliation: 'Material / Image Research Lab (MIRL), UC Santa Barbara',
+  name: "Parallax Agency and Jeff O'Brien",
+  affiliation: 'an independent research agency',
 }
