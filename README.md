@@ -72,7 +72,3 @@ sha-256 for fixity. No accounts, no servers, no fees.
 Held files (the recording, the model) are hashed with sha-256 over their actual
 bytes, in the Berkeley Protocol manner. For a recording referenced by link, an
 archived snapshot is hashed, never the remote bytes.
-
-## Licence and citation
-
-MIT. See [`CITATION.cff`](CITATION.cff). Author: Jeff O'Brien.
