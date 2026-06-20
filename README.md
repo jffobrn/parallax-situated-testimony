@@ -75,5 +75,4 @@ archived snapshot is hashed, never the remote bytes.
 
 ## Licence and citation
 
-MIT. See [`CITATION.cff`](CITATION.cff). Author: Jeff O'Brien, Material / Image
-Research Lab (MIRL), UC Santa Barbara.
+MIT. See [`CITATION.cff`](CITATION.cff). Author: Jeff O'Brien.
