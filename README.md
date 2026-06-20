@@ -1,15 +1,14 @@
 # Situated Testimony
 
-**Anchor a witness or artist account to a 3D model, a map, and a timeline,
-consent and sovereignty first.** The third tool of the **Parallax** suite, a
-consent-first counter-forensic toolkit for art history and the archive.
+**Anchor a witness or artist account to a 3D model, a map, and a timeline.** The
+third tool of the **Parallax** suite, a counter-forensic toolkit for art history
+and the archive.
 
 Situated Testimony records an account as a sequence of time-coded **statements**
 and situates each one in space: a point on a 3D model and a point on the map,
 ordered on a timeline. It is the suite's answer to Forensic Architecture's
 situated testimony, putting a witness back inside the place and recording where a
-memory attaches, and it makes the move Forensic Architecture does not: it puts
-**consent and data sovereignty at the centre**.
+memory attaches.
 
 It documents and corroborates; it does not adjudicate.
 
@@ -26,7 +25,7 @@ A recording transport plays the account; scrub it or pick a statement and the
 model orbits to its anchor, the map flies to its place, and the chronology
 highlights its moment. That cross-surface synchrony is the tool.
 
-## Consent and sovereignty by design
+## The publish boundary
 
 One boundary function (`publicClone`) produces every export and every published
 view. It:
@@ -41,9 +40,9 @@ view. It:
 - withholds or coarsens coordinates marked not safe to publish;
 - and reports all of it in an honest disclosure.
 
-Sovereignty here is a **lean layer**: a rights-holder credit and a curated set of
-labels a community may assign. The tool records and respects labels; it does not
-mint official Local Contexts labels.
+The sovereignty layer is deliberately **lean**: a rights-holder credit and a
+curated set of labels a community may assign. The tool records and respects
+labels; it does not mint official Local Contexts labels.
 
 ## Run it
 
@@ -56,8 +55,8 @@ It opens with a plainly fictional sample loaded. Everything runs in the browser:
 the project and its media stay on your machine in IndexedDB, nothing is uploaded,
 the 3D model loads from a local file, and the basemap fetches no tiles.
 
-- **Publish** builds a self-contained, consent-cleared HTML investigation (and,
-  via print CSS, a print dossier).
+- **Publish** builds a self-contained, interactive HTML investigation (and, via
+  print CSS, a print dossier).
 - **Export** / **Import** save and load the whole project as one file (the only
   unsanitized output, for your own keeping).
 
@@ -85,6 +84,6 @@ licensing.
 
 Parallax publishes these instruments for verifiability, not as products to adopt.
 
-By Parallax Agency and Jeff O'Brien. Parallax is an independent, consent-first
-research practice for art history and the archive, founded and directed by Jeff
-O'Brien (Material / Image Research Lab, UC Santa Barbara).
+By Parallax Agency and Jeff O'Brien. Parallax is an independent research practice
+for art history and the archive, founded and directed by Jeff O'Brien (Material /
+Image Research Lab, UC Santa Barbara).
