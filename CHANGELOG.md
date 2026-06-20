@@ -1,0 +1,34 @@
+# Changelog
+
+All notable changes to Situated Testimony are recorded here. The format follows
+[Keep a Changelog](https://keepachangelog.com/), and the project uses semantic
+versioning.
+
+## [1.0.0] - 2026-06-19
+
+First release. The third tool of the Parallax suite.
+
+### Added
+
+- **Testimony as time-coded statements.** An account modelled as a sequence of
+  statements, each with its words (multilingual, RTL-aware), an optional clip into
+  the recording, the real-world time it refers to, an anchor, a certainty, and its
+  own consent and sovereignty.
+- **Three readings of one account.** A Transcript spine, a 3D Model view
+  (react-three-fiber, a loaded glTF or a procedural massing), and a tokenless Map,
+  linked to a chronology and a recording transport. Scrub the recording or pick a
+  statement and every surface follows.
+- **Consent and sovereignty boundary.** One `publicClone` function produces every
+  export and published view: it drops restricted and embargoed statements, enforces
+  community-use and withholding labels, aliases protected narrators, withholds a
+  non-public model, cites the recording by hash rather than embedding the voice,
+  and withholds or coarsens unsafe coordinates, with an honest disclosure.
+- **Lean sovereignty layer.** A rights-holder credit and a curated set of labels a
+  community may assign, recorded and respected, not minted.
+- **Evidentiary discipline.** sha-256 fixity over held bytes; archived snapshots
+  hashed for linked recordings.
+- **Local-first.** The project and media live in IndexedDB; nothing is uploaded.
+  Full project export and import as one file.
+- **Publish.** A self-contained, consent-cleared HTML investigation, and a print
+  dossier via print CSS.
+- A plainly fictional sample testimony that exercises every feature.
