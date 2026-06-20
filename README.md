@@ -73,7 +73,7 @@ Held files (the recording, the model) are hashed with sha-256 over their actual
 bytes, in the Berkeley Protocol manner. For a recording referenced by link, an
 archived snapshot is hashed, never the remote bytes.
 
-## Licence and citation
+## Licence
 
 Source-available, not open source. The source code is under the
 [PolyForm Noncommercial License 1.0.0](LICENSE); the non-code assets (the design,
@@ -81,7 +81,9 @@ this documentation, the bundled sample, and the investigations the tool produces
 are under [CC BY-NC-SA 4.0](LICENSE-ASSETS.md). Free to use, modify, and share for
 any noncommercial purpose, including education, research, nonprofits, and
 government. Commercial use is not granted here; contact the authors for commercial
-licensing. See [`CITATION.cff`](CITATION.cff).
+licensing.
+
+Parallax publishes these instruments for verifiability, not as products to adopt.
 
 By Parallax Agency and Jeff O'Brien. Parallax is an independent, consent-first
 research practice for art history and the archive, founded and directed by Jeff
