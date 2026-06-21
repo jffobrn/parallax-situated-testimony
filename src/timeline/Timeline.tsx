@@ -172,7 +172,9 @@ export function Timeline() {
             style={{ cursor: 'crosshair' }}
           />
 
-          <text x={0} y={laneY - laneH / 2 - 5} fill={PAL.axis} fontSize={9} fontFamily={MONO} letterSpacing="1">
+          {/* Lane label sits at the top of the plot, clear of the marks (whose
+              dots sit on the lane and can cluster hard against the left edge). */}
+          <text x={0} y={8} fill={PAL.axis} fontSize={9} fontFamily={MONO} letterSpacing="1">
             STATEMENTS
           </text>
 
