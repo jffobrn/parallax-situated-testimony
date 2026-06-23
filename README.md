@@ -1,5 +1,7 @@
 # Situated Testimony
 
+> **Researcher's guide:** [docs/GUIDE.md](docs/GUIDE.md) walks through every view, control, and the consent boundary in full, with screenshots.
+
 **Anchor a witness or artist account to a 3D model, a map, and a timeline.** The
 third tool of the **Parallax** suite, a counter-forensic toolkit for art history
 and the archive.
