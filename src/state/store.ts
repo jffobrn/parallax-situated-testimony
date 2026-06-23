@@ -60,6 +60,7 @@ export interface AppState {
   // lifecycle
   init: () => Promise<void>
   resetToSample: () => Promise<void>
+  newBlankProject: () => Promise<void>
   adoptProject: (project: Project) => void
 
   // testimony identity + sovereignty
@@ -106,6 +107,14 @@ function schedulePersist(project: Project) {
     void saveProject(project)
     void pruneMedia(project)
   }, 400)
+}
+
+/** Cancel a pending debounced save so it cannot clobber a direct write. */
+function cancelPersist() {
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
 }
 
 // Flush a pending debounced save when the tab is hidden, so an edit made in the
@@ -163,11 +172,34 @@ export const useStore = create<AppState>()((set, get) => {
     },
 
     async resetToSample() {
+      // A debounced save from a just-prior edit would otherwise fire after this
+      // and restore the old project, so cancel it before writing the sample.
+      cancelPersist()
       await clearProject()
       const sample = await buildSampleProject()
       await saveProject(sample)
       set({
         project: sample,
+        selectedStatementId: null,
+        selectedNarratorId: null,
+        editingStatementId: null,
+        playing: false,
+        playheadSec: 0,
+        timeBrush: null,
+        placing: null,
+      })
+    },
+
+    async newBlankProject() {
+      // Start an empty testimony (one unnamed narrator, no statements),
+      // discarding the sample. Cancel any pending debounced save so it cannot
+      // restore it.
+      cancelPersist()
+      await clearProject()
+      const project = blankProject()
+      await saveProject(project)
+      set({
+        project,
         selectedStatementId: null,
         selectedNarratorId: null,
         editingStatementId: null,
