@@ -4,6 +4,20 @@ All notable changes to Situated Testimony are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses semantic
 versioning.
 
+## [1.1.1] - 2026-06-22
+
+### Changed
+
+- Removed `CITATION.cff`: these tools are published for verifiability as part of
+  Parallax, not packaged for reuse, so they carry no citation metadata.
+- Rebalanced the README to lead with the method; consent is kept as one feature
+  (the publish boundary) rather than the headline of every section.
+
+### Fixed
+
+- Chronology: the lane label no longer overlaps the leftmost statement marks when
+  dates cluster against the left edge.
+
 ## [1.1.0] - 2026-06-20
 
 ### Changed
