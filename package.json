@@ -1,7 +1,7 @@
 {
   "name": "situated-testimony",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "description": "Anchor a witness or artist account to a 3D model, a map, and a timeline, consent and sovereignty first. The third tool of the Parallax suite.",
   "license": "SEE LICENSE IN LICENSE",

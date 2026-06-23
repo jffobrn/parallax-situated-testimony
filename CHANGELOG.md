@@ -4,6 +4,20 @@ All notable changes to Situated Testimony are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses semantic
 versioning.
 
+## [1.2.1] - 2026-06-23
+
+### Added
+
+- The narrator and statement rows in the rail are keyboard accessible: each is now
+  a focusable button that activates on Enter or Space, with the standard focus
+  ring, so the testimony can be navigated without a mouse. A narrator row's filter
+  button keeps its own behaviour.
+
+### Fixed
+
+- Readout counts read in the singular when there is one (1 statement, not
+  1 statements).
+
 ## [1.2.0] - 2026-06-23
 
 ### Added

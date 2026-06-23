@@ -7,7 +7,7 @@ import {
 } from '../core'
 import { useStore } from '../state/store'
 import { allTags, narratorOf, statementSnippet } from '../lib/derive'
-import { ConsentBadge, Dir, RoleBadge } from '../components/ui'
+import { ConsentBadge, Dir, RoleBadge, rowButton } from '../components/ui'
 
 type ConsentFilter = 'all' | 'public' | 'protected'
 
@@ -160,7 +160,7 @@ function NarratorRow({
     <div
       className="row"
       data-selected={selected}
-      onClick={() => useStore.getState().selectNarrator(narrator.id)}
+      {...rowButton(() => useStore.getState().selectNarrator(narrator.id))}
     >
       <div className="row-main">
         <div className="row-title">
@@ -204,7 +204,7 @@ function StatementRow({
       className="row"
       data-selected={selected}
       data-hovered={hovered}
-      onClick={() => useStore.getState().selectStatement(statement.id)}
+      {...rowButton(() => useStore.getState().selectStatement(statement.id))}
       onMouseEnter={() => useStore.getState().hover(statement.id)}
       onMouseLeave={() => useStore.getState().hover(null)}
     >
