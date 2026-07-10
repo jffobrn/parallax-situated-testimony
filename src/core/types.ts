@@ -130,6 +130,17 @@ export interface Anchor {
   geo?: GeoPoint
 }
 
+/**
+ * A saved 3D camera pose for a statement: the camera position and the orbit
+ * target it looks at, both in the model's coordinate space. Selecting the
+ * statement flies the camera here, so a narrator's own vantage on the scene is
+ * recovered, not just the point they name.
+ */
+export interface Viewpoint {
+  pos: [number, number, number]
+  target: [number, number, number]
+}
+
 /** A text in one language, so a record can be multilingual (including RTL). */
 export interface LocalizedText {
   text: string
@@ -226,6 +237,8 @@ export interface Statement {
   /** The real-world time the memory is about (not when it was recorded). */
   refersTo?: { value: string; precision: TimePrecision }
   anchor?: Anchor
+  /** A saved 3D camera pose the selection flies to. */
+  viewpoint?: Viewpoint
   certainty: Certainty
   consent: Consent
   sovereignty: Sovereignty

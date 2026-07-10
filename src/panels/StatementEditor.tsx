@@ -7,6 +7,7 @@ import {
   type TimePrecision,
 } from '../core'
 import { useStore } from '../state/store'
+import { viewpointBridge } from '../model/viewpointBridge'
 import { PointFields } from '../components/points'
 import { SovereigntyEditor } from '../components/Sovereignty'
 import {
@@ -39,11 +40,27 @@ export function StatementEditor({ statement }: { statement: Statement }) {
   const setPlacing = useStore((s) => s.setPlacing)
   const playheadSec = useStore((s) => s.playheadSec)
   const [confirmDel, setConfirmDel] = useState(false)
+  const [vpMsg, setVpMsg] = useState<string | null>(null)
 
   const id = statement.id
   const patch = (partial: Partial<Statement>) => useStore.getState().updateStatement(id, partial)
   const patchAnchor = (partial: Partial<Anchor>) =>
     patch({ anchor: { ...statement.anchor, ...partial } })
+
+  const flash = (m: string) => {
+    setVpMsg(m)
+    setTimeout(() => setVpMsg(null), 3000)
+  }
+  const captureViewpoint = () => {
+    const vp = viewpointBridge.capture()
+    if (vp) {
+      patch({ viewpoint: vp })
+      flash('Viewpoint saved.')
+    } else {
+      useStore.getState().setView('model')
+      flash('Frame the shot in the model view, then capture.')
+    }
+  }
 
   const narratorOptions = [
     { value: '', label: 'Unassigned' },
@@ -234,6 +251,29 @@ export function StatementEditor({ statement }: { statement: Statement }) {
             : 'Place in model'}
         </button>
       )}
+
+      <div className="divider" />
+      <span className="label">3D viewpoint</span>
+      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+        A saved camera pose the selection flies to. Frame the shot in the model
+        view, then capture.
+      </p>
+      <div className="btn-row">
+        <button className="btn btn-sm" onClick={captureViewpoint}>
+          {statement.viewpoint ? 'Recapture viewpoint' : 'Capture viewpoint'}
+        </button>
+        {statement.viewpoint && (
+          <button
+            className="btn btn-sm btn-ghost btn-danger"
+            onClick={() => patch({ viewpoint: undefined })}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <p className="faint" style={{ fontSize: 11, marginTop: 6 }}>
+        {vpMsg ?? (statement.viewpoint ? 'A viewpoint is saved.' : 'No viewpoint saved.')}
+      </p>
 
       <div className="divider" />
       <span className="label">Anchor on the map</span>

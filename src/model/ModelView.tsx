@@ -1,11 +1,12 @@
 import { Suspense, useEffect, useMemo, useRef } from 'react'
-import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Edges, Html, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
-import { type ModelAnchor, type SceneModel } from '../core'
+import { type ModelAnchor, type SceneModel, type Viewpoint } from '../core'
 import { useStore } from '../state/store'
 import { useMediaUrl } from '../state/useMediaUrl'
 import { activeStatementId, modelAnchors, statementSnippet } from '../lib/derive'
+import { viewpointBridge } from './viewpointBridge'
 
 const NEUTRAL = '#273140'
 const EDGE = '#5b6a80'
@@ -43,6 +44,7 @@ export function ModelView() {
 
         <Anchors />
         <CameraRig />
+        <ViewpointBridge />
 
         <OrbitControls makeDefault enableDamping dampingFactor={0.12} maxPolarAngle={Math.PI / 2.02} />
       </Canvas>
@@ -237,25 +239,71 @@ function AnchorMarker({
   )
 }
 
-/** Lerp the orbit target toward the focused statement's anchor. */
-function CameraRig() {
-  const desired = useRef(new THREE.Vector3())
+/**
+ * Registers a capture of the live camera pose for the statement editor to save.
+ */
+function ViewpointBridge() {
+  const camera = useThree((s) => s.camera)
+  const controls = useThree((s) => s.controls)
+  useEffect(() => {
+    viewpointBridge.capture = () => {
+      const c = controls as unknown as { target?: THREE.Vector3 } | null
+      if (!c?.target) return null
+      const p = camera.position
+      const t = c.target
+      return { pos: [p.x, p.y, p.z], target: [t.x, t.y, t.z] }
+    }
+    return () => {
+      viewpointBridge.capture = () => null
+    }
+  }, [camera, controls])
+  return null
+}
 
-  // Read the focus inside the frame loop (not during render) so this stays pure
-  // under StrictMode and concurrent rendering. The selected statement, or the
-  // active one under the playhead, leads the camera.
+/**
+ * Leads the camera to the focused statement. When the statement has a saved
+ * viewpoint, the camera flies there (position and target) once on selection, then
+ * releases so the user can orbit freely. Without a viewpoint, only the orbit
+ * target is led to the anchor, the earlier behaviour, leaving the orbit to hand.
+ */
+function CameraRig() {
+  const desiredTarget = useRef(new THREE.Vector3())
+  const desiredPos = useRef(new THREE.Vector3())
+  const lastFocus = useRef<string | null | undefined>(undefined)
+  const flying = useRef<Viewpoint | null>(null)
+
   useFrame((state) => {
     const st = useStore.getState()
     const focusId = st.selectedStatementId ?? activeStatementId(st.project, st.playheadSec)
-    const focus = focusId
-      ? st.project.statements.find((s) => s.id === focusId)?.anchor?.model
-      : undefined
-    if (!focus) return
+    const stmt = focusId ? st.project.statements.find((s) => s.id === focusId) : undefined
     const controls = state.controls as unknown as { target: THREE.Vector3; update: () => void } | null
     if (!controls?.target) return
-    desired.current.set(focus.x, focus.y, focus.z)
-    controls.target.lerp(desired.current, 0.06)
-    controls.update()
+
+    // A change of focus begins a flight to that statement's saved viewpoint.
+    if (focusId !== lastFocus.current) {
+      lastFocus.current = focusId
+      flying.current = stmt?.viewpoint ?? null
+    }
+
+    if (flying.current) {
+      const vp = flying.current
+      desiredPos.current.set(vp.pos[0], vp.pos[1], vp.pos[2])
+      desiredTarget.current.set(vp.target[0], vp.target[1], vp.target[2])
+      state.camera.position.lerp(desiredPos.current, 0.08)
+      controls.target.lerp(desiredTarget.current, 0.08)
+      controls.update()
+      if (state.camera.position.distanceTo(desiredPos.current) < 0.08) flying.current = null
+      return
+    }
+
+    // No saved viewpoint: lead the orbit target to the anchor, leaving orbit free.
+    if (!stmt?.viewpoint) {
+      const focus = stmt?.anchor?.model
+      if (!focus) return
+      desiredTarget.current.set(focus.x, focus.y, focus.z)
+      controls.target.lerp(desiredTarget.current, 0.06)
+      controls.update()
+    }
   })
 
   return null
