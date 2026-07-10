@@ -204,6 +204,8 @@ export interface SceneModel {
   kind: ModelKind
   /** A glTF/glb held locally and hashed. Absent for a procedural scene. */
   file?: HeldFile
+  /** A glTF/glb loaded from a URL for the working view; nothing is downloaded. */
+  url?: string
   consent: Consent
   note?: string
 }

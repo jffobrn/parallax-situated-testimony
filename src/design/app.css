@@ -643,3 +643,58 @@
   text-align: right;
   color: var(--text-2);
 }
+
+/* ---- Measure tool ---------------------------------------------------- */
+.measure-start {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-panel);
+  font-size: var(--t-micro);
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  background: rgba(11, 14, 19, 0.86);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.measure-start:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+.measure-card {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-panel);
+  min-width: 220px;
+  padding: var(--s2) var(--s3);
+  background: rgba(11, 14, 19, 0.92);
+  border: 1px solid var(--signal-line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+.measure-readout {
+  display: flex;
+  gap: var(--s3);
+  align-items: baseline;
+  font-size: var(--t-sm);
+  color: var(--text-2);
+}
+.measure-readout b {
+  color: var(--signal-bright);
+  font-size: var(--t-md);
+}
+.measure-hint {
+  margin: 4px 0 6px;
+  font-size: var(--t-micro);
+  line-height: 1.35;
+}
+.measure-card .btn-row {
+  margin-top: 6px;
+  gap: 4px;
+}

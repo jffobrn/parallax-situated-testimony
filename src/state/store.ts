@@ -24,6 +24,7 @@ import {
   type Statement,
   type Testimony,
 } from '../core'
+import { parseTranscript } from '../lib/transcript'
 import { buildSampleProject } from '../sample/sampleProject'
 
 export type StageView = 'transcript' | 'model' | 'map'
@@ -76,6 +77,8 @@ export interface AppState {
 
   // statements
   addStatement: () => void
+  /** Parse SRT / VTT / plain text into statements. Returns how many were added. */
+  importTranscript: (text: string, lang?: string) => number
   updateStatement: (id: string, partial: Partial<Statement>) => void
   removeStatement: (id: string) => void
   moveStatement: (id: string, dir: -1 | 1) => void
@@ -310,6 +313,25 @@ export const useStore = create<AppState>()((set, get) => {
         selectedNarratorId: null,
         editingStatementId: statement.id,
       })
+    },
+
+    importTranscript(text, lang = 'en') {
+      const cues = parseTranscript(text)
+      if (cues.length === 0) return 0
+      const p = get().project
+      const narratorId = p.testimony.narrators[0]?.id
+      const added: Statement[] = cues.map((c) => ({
+        id: newId('st'),
+        narratorId,
+        text: [{ text: c.text, lang }],
+        ...(c.startSec !== undefined ? { clip: { startSec: c.startSec, endSec: c.endSec } } : {}),
+        certainty: 'probable',
+        consent: 'public',
+        sovereignty: blankSovereignty(),
+        tags: [],
+      }))
+      commit({ ...p, statements: [...p.statements, ...added] })
+      return cues.length
     },
 
     updateStatement(id, partial) {

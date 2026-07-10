@@ -341,15 +341,32 @@ function ModelFields() {
         <button className="btn btn-sm" onClick={() => fileInput.current?.click()}>
           {busy ?? (model?.file ? 'Replace model' : 'Load glTF/glb')}
         </button>
-        {model?.file && (
+        {(model?.file || model?.url) && (
           <button
             className="btn btn-sm btn-ghost"
-            onClick={() => patch({ file: undefined, kind: 'procedural' })}
+            onClick={() => patch({ file: undefined, url: undefined, kind: 'procedural' })}
           >
             Use procedural
           </button>
         )}
       </div>
+
+      <div style={{ height: 10 }} />
+      <Field label="Or load from a URL" hint="A glTF/glb the host serves cross-origin. Nothing is downloaded.">
+        <input
+          className="input input-mono"
+          placeholder="https://example.org/scene.glb"
+          value={model?.url ?? ''}
+          onChange={(e) => {
+            const v = e.target.value.trim()
+            patch(
+              v
+                ? { url: v, kind: 'gltf', file: undefined }
+                : { url: undefined, kind: model?.file ? 'gltf' : 'procedural' },
+            )
+          }}
+        />
+      </Field>
 
       <div style={{ height: 10 }} />
       <span className="label">Model consent</span>

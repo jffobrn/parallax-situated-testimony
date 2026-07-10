@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   formatDateTimeShort,
   hasRestrictingLabel,
@@ -7,6 +7,7 @@ import {
 } from '../core'
 import { useStore } from '../state/store'
 import { allTags, narratorOf, statementSnippet } from '../lib/derive'
+import { readFileText } from '../lib/download'
 import { ConsentBadge, Dir, RoleBadge, rowButton } from '../components/ui'
 
 type ConsentFilter = 'all' | 'public' | 'protected'
@@ -25,6 +26,20 @@ export function Rail() {
   const [consentFilter, setConsentFilter] = useState<ConsentFilter>('all')
   const [narratorFilter, setNarratorFilter] = useState<string | null>(null)
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
+  const transcriptInput = useRef<HTMLInputElement | null>(null)
+  const [importMsg, setImportMsg] = useState<string | null>(null)
+
+  const onTranscriptFile = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      const text = await readFileText(file)
+      const n = useStore.getState().importTranscript(text)
+      setImportMsg(n > 0 ? `Imported ${n} statement${n === 1 ? '' : 's'}.` : 'No cues found in that file.')
+    } catch {
+      setImportMsg('Could not read that transcript file.')
+    }
+    setTimeout(() => setImportMsg(null), 3500)
+  }
 
   const t = project.testimony
   const home = !selectedStatementId && !selectedNarratorId
@@ -104,10 +119,29 @@ export function Rail() {
         <div className="panel-head">
           <span className="label"><span className="label-num">03</span>Statements</span>
           <span className="faint mono" style={{ fontSize: 11 }}>{statements.length}/{project.statements.length}</span>
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() => transcriptInput.current?.click()}
+            title="Import an SRT, VTT, or plain-text transcript as statements"
+          >
+            Import
+          </button>
           <button className="btn btn-sm btn-ghost" onClick={() => useStore.getState().addStatement()}>
             + Statement
           </button>
+          <input
+            ref={transcriptInput}
+            type="file"
+            accept=".srt,.vtt,.txt,text/plain,text/vtt,application/x-subrip"
+            style={{ display: 'none' }}
+            onChange={(e) => onTranscriptFile(e.target.files?.[0])}
+          />
         </div>
+        {importMsg && (
+          <p className="faint" style={{ fontSize: 11, padding: '0 var(--s3) 6px' }}>
+            {importMsg}
+          </p>
+        )}
 
         <div className="facet-row">
           {(['all', 'public', 'protected'] as ConsentFilter[]).map((c) => (

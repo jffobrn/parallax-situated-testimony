@@ -73,8 +73,11 @@ function placeFromEvent(e: ThreeEvent<PointerEvent>, placing: boolean) {
 }
 
 function Scene({ model, placing }: { model: SceneModel | undefined; placing: boolean }) {
-  if (model?.file?.blobKey && model.kind === 'gltf') {
+  if (model?.kind === 'gltf' && model.file?.blobKey) {
     return <GltfScene blobKey={model.file.blobKey} placing={placing} />
+  }
+  if (model?.kind === 'gltf' && model.url) {
+    return <GltfModel url={model.url} placing={placing} />
   }
   return <ProceduralScene placing={placing} />
 }

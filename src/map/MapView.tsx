@@ -2,6 +2,7 @@ import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { Layer } from '@deck.gl/core'
+import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
 import { useStore } from '../state/store'
 import { activeStatementId } from '../lib/derive'
 import type { Project } from '../core'
@@ -18,6 +19,13 @@ import {
   type WaybackRelease,
 } from './basemap'
 import { geocodePlace, type GeoResult, parseCoordinate } from './geocode'
+import {
+  fmtArea,
+  fmtDistance,
+  type LngLatTuple,
+  pathLengthM,
+  polygonAreaM2,
+} from '../lib/measure'
 
 const BASEMAP_KEY = 'situated-testimony.basemap'
 const LABELS_KEY = 'situated-testimony.labels'
@@ -72,9 +80,15 @@ export function MapView() {
   const [labels, setLabels] = useState<boolean>(loadLabelsPref)
   const [waybackDate, setWaybackDate] = useState('')
   const [releases, setReleases] = useState<WaybackRelease[]>([])
+  const [measuring, setMeasuring] = useState(false)
+  const [measurePts, setMeasurePts] = useState<LngLatTuple[]>([])
 
   const dataRef = useRef({ project, selectedStatementId, hoveredId, activeId })
   dataRef.current = { project, selectedStatementId, hoveredId, activeId }
+  const measuringRef = useRef(false)
+  const measurePtsRef = useRef<LngLatTuple[]>([])
+  measuringRef.current = measuring
+  measurePtsRef.current = measurePts
 
   const buildLayers = (): Layer[] => {
     const map = mapRef.current
@@ -87,7 +101,7 @@ export function MapView() {
       north: b.getNorth(),
     }
     const d = dataRef.current
-    return buildMapLayers({
+    const layers = buildMapLayers({
       project: d.project,
       selectedStatementId: d.selectedStatementId,
       hoveredId: d.hoveredId,
@@ -95,6 +109,53 @@ export function MapView() {
       graticule: graticuleLines(bounds),
       onPickStatement: (id) => useStore.getState().selectStatement(id),
     })
+    return [...layers, ...measureLayers()]
+  }
+
+  // Distance path, area fill, and vertices for the measure tool.
+  const measureLayers = (): Layer[] => {
+    const pts = measurePtsRef.current
+    if (pts.length === 0) return []
+    const out: Layer[] = []
+    if (pts.length >= 3) {
+      out.push(
+        new PolygonLayer({
+          id: 'measure-fill',
+          data: [pts],
+          getPolygon: (d) => d as LngLatTuple[],
+          getFillColor: [243, 169, 60, 38],
+          stroked: false,
+          filled: true,
+        }),
+      )
+    }
+    if (pts.length >= 2) {
+      out.push(
+        new PathLayer({
+          id: 'measure-path',
+          data: [pts],
+          getPath: (d) => d as LngLatTuple[],
+          getColor: [243, 169, 60, 220],
+          getWidth: 2,
+          widthUnits: 'pixels',
+        }),
+      )
+    }
+    out.push(
+      new ScatterplotLayer({
+        id: 'measure-pts',
+        data: pts,
+        getPosition: (d) => d as LngLatTuple,
+        getFillColor: [243, 169, 60, 255],
+        getRadius: 4,
+        radiusUnits: 'pixels',
+        stroked: true,
+        getLineColor: [10, 12, 16, 255],
+        lineWidthUnits: 'pixels',
+        getLineWidth: 1,
+      }),
+    )
+    return out
   }
 
   const rebuild = () => {
@@ -139,6 +200,10 @@ export function MapView() {
     map.on('move', rebuild)
 
     map.on('click', (e) => {
+      if (measuringRef.current) {
+        setMeasurePts((pts) => [...pts, [e.lngLat.lng, e.lngLat.lat]])
+        return
+      }
       const p = useStore.getState().placing
       if (p && p.kind !== 'statement-model') {
         useStore.getState().applyGeoPlacement(e.lngLat.lat, e.lngLat.lng)
@@ -265,7 +330,7 @@ export function MapView() {
   useEffect(() => {
     rebuild()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project, selectedStatementId, hoveredId, activeId])
+  }, [project, selectedStatementId, hoveredId, activeId, measurePts])
 
   // Fit the view to placed points shortly after they change, so a coordinate
   // typed into the inspector becomes visible without a reload.
@@ -294,8 +359,21 @@ export function MapView() {
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
-    map.getCanvas().style.cursor = placing && placing.kind !== 'statement-model' ? 'crosshair' : ''
-  }, [placing])
+    const placingCursor = placing && placing.kind !== 'statement-model'
+    map.getCanvas().style.cursor = placingCursor || measuring ? 'crosshair' : ''
+  }, [placing, measuring])
+
+  const startMeasure = () => {
+    setMeasurePts([])
+    setMeasuring(true)
+  }
+  const clearMeasure = () => setMeasurePts([])
+  const undoMeasure = () => setMeasurePts((pts) => pts.slice(0, -1))
+  const doneMeasure = () => setMeasuring(false)
+  const closeMeasure = () => {
+    setMeasuring(false)
+    setMeasurePts([])
+  }
 
   return (
     <>
@@ -323,7 +401,84 @@ export function MapView() {
         <div className="legend-row"><span className="sw sw-place" /> testimony place</div>
         <div className="legend-row"><span className="sw sw-unsafe" /> protected</div>
       </div>
+      <MeasureControl
+        measuring={measuring}
+        pts={measurePts}
+        onStart={startMeasure}
+        onUndo={undoMeasure}
+        onClear={clearMeasure}
+        onDone={doneMeasure}
+        onClose={closeMeasure}
+      />
     </>
+  )
+}
+
+function MeasureControl({
+  measuring,
+  pts,
+  onStart,
+  onUndo,
+  onClear,
+  onDone,
+  onClose,
+}: {
+  measuring: boolean
+  pts: LngLatTuple[]
+  onStart: () => void
+  onUndo: () => void
+  onClear: () => void
+  onDone: () => void
+  onClose: () => void
+}) {
+  if (!measuring && pts.length === 0) {
+    return (
+      <button className="measure-start mono" onClick={onStart} title="Measure distance and area">
+        Measure
+      </button>
+    )
+  }
+  const dist = pts.length >= 2 ? fmtDistance(pathLengthM(pts)) : null
+  const area = pts.length >= 3 ? fmtArea(polygonAreaM2(pts)) : null
+  return (
+    <div className="measure-card mono">
+      <div className="measure-readout">
+        <span>
+          <b>{dist ?? '--'}</b> path
+        </span>
+        {area && (
+          <span>
+            <b>{area}</b> area
+          </span>
+        )}
+        <span className="faint">{pts.length} pt{pts.length === 1 ? '' : 's'}</span>
+      </div>
+      {measuring && (
+        <p className="measure-hint faint">
+          Click the map to add points. A third point closes the area.
+        </p>
+      )}
+      <div className="btn-row">
+        {measuring ? (
+          <button className="btn btn-sm btn-ghost" onClick={onDone} disabled={pts.length < 2}>
+            Done
+          </button>
+        ) : (
+          <button className="btn btn-sm btn-ghost" onClick={onStart}>
+            New
+          </button>
+        )}
+        <button className="btn btn-sm btn-ghost" onClick={onUndo} disabled={pts.length === 0}>
+          Undo
+        </button>
+        <button className="btn btn-sm btn-ghost" onClick={onClear} disabled={pts.length === 0}>
+          Clear
+        </button>
+        <button className="btn btn-sm btn-ghost" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </div>
   )
 }
 
