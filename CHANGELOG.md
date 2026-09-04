@@ -4,6 +4,45 @@ All notable changes to Situated Testimony are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses semantic
 versioning.
 
+## [1.3.0] - 2026-09-04
+
+The four feature commits of 2026-07-10, released and documented together with a
+browser-verification pass.
+
+### Added
+
+- A retrievable basemap in the Map view: Esri World Imagery (satellite,
+  tokenless) is the default ground, with OpenStreetMap streets, Esri topographic,
+  the offline coordinate grid, and a local .pmtiles file as alternatives, plus a
+  place-label overlay.
+- Dated imagery: with satellite active, an Imagery menu switches from the live
+  mosaic to a dated release of the Esri World Imagery Wayback archive, so a
+  testimony can be read against imagery near its own moment.
+- Place search on the map: a typed coordinate resolves locally; a place name
+  queries the Nominatim geocoder, and picking a result flies the map there.
+- A measure tool on the map: a clicked path reads out its distance in metres, and
+  a closed figure adds its area. A reading aid, not saved to the project.
+- Transcript import: an SRT or VTT file becomes statements with their clip times
+  set, and a plain-text file becomes one statement per paragraph. Imported
+  statements arrive public, marked probable, and attributed to the first
+  narrator.
+- The scene model can load from a URL (a glTF/glb the host serves cross-origin),
+  as an alternative to a local file; only the URL is stored.
+- 3D viewpoint bookmarks: a statement can capture the model camera's pose, and
+  selecting the statement then flies the camera to that saved framing before
+  releasing it.
+
+### Fixed
+
+- The model-from-URL field's hint claimed nothing is downloaded; it now says what
+  happens (the file is fetched to display, and only the URL is stored).
+- The README and the researcher's guide still described the pre-1.3 posture (no
+  map service called, a synthetic basemap only). Both now state the actual
+  retrieval surface and what each request discloses: tile coordinates to the
+  tile host, search text to the geocoder, never testimony data. The guide gains a
+  section covering the basemap picker, dated imagery, search, measure, transcript
+  import, model-from-URL, and viewpoint bookmarks.
+
 ## [1.2.1] - 2026-06-23
 
 ### Added

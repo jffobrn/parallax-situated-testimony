@@ -352,7 +352,7 @@ function ModelFields() {
       </div>
 
       <div style={{ height: 10 }} />
-      <Field label="Or load from a URL" hint="A glTF/glb the host serves cross-origin. Nothing is downloaded.">
+      <Field label="Or load from a URL" hint="A glTF/glb the host serves cross-origin. Fetched to display; only the URL is stored.">
         <input
           className="input input-mono"
           placeholder="https://example.org/scene.glb"

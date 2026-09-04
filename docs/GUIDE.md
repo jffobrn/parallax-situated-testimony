@@ -9,9 +9,11 @@ the whole is governed by the narrators' consent and the rights of the communitie
 involved. The output is a consent-cleared, self-contained static artifact.
 
 It is the third instrument in the **Parallax** suite. Everything runs in your
-browser. No file is uploaded, no map service is called, and the default basemap
-fetches no third-party tiles, so nothing about the testimony or its location
-leaves your machine.
+browser and no file is uploaded: the testimony, its media, and its locations stay
+on your machine. The map retrieves a basemap (satellite imagery by default) and
+the place search calls a geocoder, so those services see the area you are viewing
+and the names you search, never the testimony itself. An offline grid basemap is
+one click away when even that is unwanted.
 
 ![The Transcript: timecoded statements with their narrator, consent, certainty, and anchor badges, the recording transport beneath, and the testimony in the inspector](images/01-transcript.png)
 
@@ -31,6 +33,7 @@ leaves your machine.
   - [Consent and sovereignty on a statement](#consent-and-sovereignty-on-a-statement)
 - [The recording transport](#the-recording-transport)
 - [The three views](#the-three-views)
+- [The map: basemap, search, and measure](#the-map-basemap-search-and-measure)
 - [Consent, sovereignty, and release](#consent-sovereignty-and-release)
 - [Publishing](#publishing)
 - [Saving and sharing projects](#saving-and-sharing-projects)
@@ -148,7 +151,10 @@ Selecting the testimony card opens its editor:
 - **Place.** A name, coordinates, a **safe to publish** toggle, and **Move on
   map**: the location the map view orients to.
 - **Recording** and **model.** Attach the audio (or video) recording and the 3D
-  model of the site; these power the transport and the Model view.
+  model of the site; these power the transport and the Model view. The model can
+  be a local glTF/glb file (hashed and held in your browser) or a URL to one the
+  host serves cross-origin, fetched to display with only the URL stored. With
+  neither, a neutral procedural massing stands in.
 
 The testimony also carries a sovereignty block (a rights holder and any labels)
 that applies to the account as a whole.
@@ -174,6 +180,12 @@ dropped from the published artifact entirely.
 ## Statements
 
 Press **+ Statement** to add one, attributed to the current narrator.
+
+**Import** (beside it) reads an existing transcript instead of retyping it: an
+SRT or VTT subtitle file becomes statements with their clip times already set,
+and a plain-text file becomes one statement per paragraph. Imported statements
+arrive public, marked probable, attributed to the testimony's first narrator, and
+unanchored; reattributing, anchoring, and consent remain your work.
 
 ### What a statement records
 
@@ -201,6 +213,12 @@ A statement becomes situated when you anchor it:
 
 An anchored statement is what lets the model orbit and the map fly to it when you
 pick it.
+
+A statement can also carry a **3D viewpoint**: frame the shot in the Model view
+(orbit and zoom until the framing says what the statement says), then press
+**Capture viewpoint** in the statement editor. From then on, selecting the
+statement flies the camera to that saved pose before releasing it to your hand.
+Recapture replaces the pose; Clear removes it.
 
 ### Consent and sovereignty on a statement
 
@@ -241,8 +259,10 @@ The view switcher (**Transcript / Model / Map**) changes the stage:
   statement anchors sit in the space, and selecting a statement orbits to it. The
   scene is a schematic massing, not a photoreal reconstruction: enough to situate a
   memory against a wall or a corner.
-- **Map** places the statement anchors and the testimony place on the synthetic
-  graticule. Selecting a statement flies to its anchor.
+- **Map** places the statement anchors and the testimony place on a retrievable
+  basemap, satellite imagery by default. Selecting a statement flies to its
+  anchor. The basemap picker, the place search, and the measure tool are covered
+  in [the next section](#the-map-basemap-search-and-measure).
 
 The Model and Map are drawn live in the browser; on a very first switch in some
 environments they paint once you interact (orbit, or pan), which is a rendering
@@ -251,6 +271,37 @@ quirk of a backgrounded canvas, not a fault in the data.
 ![The Model view: the 3D massing of the site, the statement anchors sitting in the space, and the selected statement labelled](images/02-model.png)
 
 ![The Map view: the statement anchors and the testimony place on the synthetic graticule](images/03-map.png)
+
+---
+
+## The map: basemap, search, and measure
+
+The Map view carries its own small toolkit, added in 1.3.0.
+
+**Basemap.** The picker at the top right chooses the ground: **Satellite** (Esri
+World Imagery, tokenless, the default), **Streets** (OpenStreetMap), **Topo**
+(Esri topographic with hillshade), **Grid** (the offline graticule; nothing is
+fetched), or **File** (a local `.pmtiles` basemap; nothing is fetched). A
+**Labels** toggle overlays place names on the satellite ground.
+
+**Dated imagery.** With Satellite active, the **Imagery** menu switches from the
+live mosaic to a dated release of the Esri World Imagery Wayback archive. A
+testimony about 1992 can be read against imagery from a chosen date rather than
+today's, which is often the whole point.
+
+**Search.** The search box takes a place name or a bare coordinate. A typed
+`lat, lng` resolves locally with no network call; a place name is sent to the
+Nominatim (OpenStreetMap) geocoder, and picking a result flies the map there.
+
+**Measure.** The Measure button starts a path: click to add points, and the
+readout gives the running distance in metres; a third point closes the figure and
+adds its area. Undo, Clear, and Done are in the readout. Measurements are a
+reading aid; they are not saved to the project.
+
+**What retrieval discloses.** Tile requests disclose the tile coordinates of the
+area you are viewing to the tile host (Esri or OpenStreetMap); a place search
+discloses the search text to the geocoder. No statement, narrator, media, or
+project data is ever part of these requests. Grid and File fetch nothing at all.
 
 ---
 
@@ -351,8 +402,9 @@ display correctly. The model and map are pointer-driven (orbit, pan, zoom).
   statements against, not a measured or photoreal reconstruction.
 - **You bring the recording and the model.** The tool produces neither; it situates
   what you supply.
-- **The basemap is synthetic.** The map background is a graticule with no tiles; it
-  gives geometry and scale, not satellite context.
+- **The basemap is a reading surface.** Retrieved imagery (live or dated) is a
+  third party's mosaic, not evidence the tool has verified; treat a date picked
+  from the Wayback menu as that archive's release date, not a capture date.
 - **A lean rights layer.** The sovereignty block governs what publishes; it is not
   a full sovereignty registry.
 
@@ -361,10 +413,14 @@ display correctly. The model and map are pointer-driven (orbit, pan, zoom).
 ## Privacy and data handling
 
 Situated Testimony is local-first. Records, the recording, and the model live in
-your browser's IndexedDB and are never uploaded. The synthetic graticule basemap
-makes no tile requests. The recording is never embedded in the published artifact,
-only cited by hash, so the voice is not released. The published artifact is a
-single file you control; nothing is sent anywhere unless you choose to share it.
+your browser's IndexedDB and are never uploaded. The basemap and the place search
+are the two retrievals: tile requests disclose the viewed area's tile coordinates
+to the tile host, and a search discloses its text to the geocoder; the Grid and
+File basemaps make no requests at all. A model loaded from a URL is fetched from
+that host. No testimony data rides on any of these requests. The recording is
+never embedded in the published artifact, only cited by hash, so the voice is not
+released. The published artifact is a single file you control; nothing is sent
+anywhere unless you choose to share it.
 
 ---
 

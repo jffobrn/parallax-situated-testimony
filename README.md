@@ -20,8 +20,9 @@ It documents and corroborates; it does not adjudicate.
   the tool.
 - **Model** : a 3D scene (a loaded glTF, or a neutral procedural massing) with
   each statement's anchor as a marker.
-- **Map** : the testimony place and each statement's ground anchor, on a tokenless
-  MapLibre map that fetches no tiles.
+- **Map** : the testimony place and each statement's ground anchor, on a MapLibre
+  map with a retrievable basemap: satellite imagery by default, with streets,
+  topographic, dated historical imagery, a local PMTiles file, or an offline grid.
 
 A recording transport plays the account; scrub it or pick a statement and the
 model orbits to its anchor, the map flies to its place, and the chronology
@@ -54,8 +55,10 @@ npm run dev
 ```
 
 It opens with a plainly fictional sample loaded. Everything runs in the browser:
-the project and its media stay on your machine in IndexedDB, nothing is uploaded,
-the 3D model loads from a local file, and the basemap fetches no tiles.
+the project and its media stay on your machine in IndexedDB and nothing about the
+testimony is uploaded. The 3D model loads from a local file or a URL you supply.
+The basemap retrieves tiles (satellite by default); the offline grid fetches
+nothing.
 
 - **Publish** builds a self-contained, interactive HTML investigation (and, via
   print CSS, a print dossier).
