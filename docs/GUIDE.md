@@ -15,7 +15,7 @@ the place search calls a geocoder, so those services see the area you are viewin
 and the names you search, never the testimony itself. An offline grid basemap is
 one click away when even that is unwanted.
 
-![The Transcript: timecoded statements with their narrator, consent, certainty, and anchor badges, the recording transport beneath, and the testimony in the inspector](images/01-transcript.png)
+![The Transcript: timecoded statements with their narrator, consent, certainty, and anchors in words, the recording transport beneath, and the testimony in the inspector](images/01-transcript.png)
 
 ---
 
@@ -122,19 +122,49 @@ saves to the browser automatically.
 
 ## The interface
 
-The window has three columns and a dock. A left **rail** carries the testimony
-card, the narrators, and the statements with their filters; a central **stage**
-that switches between three views; a right **inspector**; and the **recording
-transport** with the **chronology** docked along the bottom. The topbar holds the
-view switcher, the actions, and a live **readout** (statements, how many public,
-narrators).
+Situated Testimony is laid out like working software.
 
-- Click the **testimony card** to edit the testimony.
-- Click a **narrator** or a **statement** row to select it; the inspector switches
-  to its editor and the views follow the selection.
-- The statement list has facet chips (**All / Public / Protected**, and tags), and
-  each narrator row has a **filter** button that limits the statements to that
-  voice.
+- The **title bar** carries the menus, the testimony's title, and **Publish**, the
+  one primary action. **Case** holds new, open, save, and reset to the sample;
+  **View** holds the stage view and the appearance; **Help** holds About and this
+  guide.
+- The **tool bar** holds the stage switch (**Transcript**, **Model**, **Map**)
+  and the tools themselves: **Select**; **Anchor in model** and **Anchor on map**
+  (each needs a statement selected, switches to its view, and waits for a click);
+  and **Place testimony** (a click on the map sets the testimony's place). The
+  current view adds its own tools: in the Model view, **Capture viewpoint**; in the
+  Map view, the **Ground** control, **Measure**, and the place search.
+- The **Testimony** pane on the left is an outline of the account: the testimony
+  itself, then the narrators and the statements as compact tables. Each group
+  folds away, and **Add** in the pane's header adds a narrator, a statement, or
+  statements from a transcript file.
+- The **stage** in the centre shows the current view.
+- The **Properties** pane on the right edits whatever is selected, as a grid of
+  labelled fields grouped under plain headings.
+- The **dock** along the bottom carries the recording transport above the
+  **Chronology**.
+- The **status bar** at the foot reports the cursor's coordinates in the Map view
+  (and the playhead elsewhere), the counts of statements and narrators, how many
+  narrators publish under an alias, and how many statements are withheld from
+  publication. Outcomes (saved, imported, reset) appear here too.
+
+**Appearance.** Situated Testimony opens in a light working mode and switches to a
+dark one when your system does. View, then Appearance, fixes it to Light or Dark
+for this browser; the choice is a viewer's preference and is never saved in the
+project. The 3D scene, the map's marks, and the chronology follow the choice. On a
+narrow screen the panes stack, with the stage first.
+
+- Click the **testimony** at the top of the outline to edit it.
+- Click a **narrator** or a **statement** row to select it; the Properties pane
+  switches to its editor and the views follow the selection.
+- Each narrator row gives the name, role, whose identity may be known (in words),
+  and how many statements the narrator gives. Each statement row gives the
+  opening words, the narrator, the clip time, and its consent. A statement that is
+  restricted, embargoed, or held back by a sovereignty label (read **Label**)
+  shows in red with a red rule down the row's edge; so does a narrator whose
+  identity is protected.
+- Above the statements, filters narrow the list: **All**, **Public**, or
+  **Withheld**; a narrator; and one or more tags.
 
 Rail rows are keyboard-navigable: tab, then Enter or Space.
 
@@ -163,25 +193,25 @@ that applies to the account as a whole.
 
 ## Narrators
 
-Press **+ Narrator**. A narrator has:
+Choose **Add**, then **Narrator**. A narrator has:
 
 - **Name.** Held back in publication when identity consent is restricted.
-- **Role.** Witness, expert, and so on, shown as a badge.
-- **Identity consent.** **Public** (the name may publish) or **restricted** (the
+- **Role.** Witness, expert, and so on.
+- **Who may know this narrator.** **Public** (the name may publish) or **restricted** (the
   name is held back; in anything published the narrator becomes a stable alias,
   Narrator A, Narrator B).
 
-A narrator's row shows a count of their statements and a **filter** that focuses
-the transcript on that voice. A narrator with no surviving public statement is
+A narrator's row shows a count of their statements; the narrator filter above the
+statements focuses the list on that voice. A narrator with no surviving public statement is
 dropped from the published artifact entirely.
 
 ---
 
 ## Statements
 
-Press **+ Statement** to add one, attributed to the current narrator.
+Choose **Add**, then **Statement**, to add one, attributed to the current narrator.
 
-**Import** (beside it) reads an existing transcript instead of retyping it: an
+**Add**, then **Statements from a transcript**, reads an existing transcript instead of retyping it: an
 SRT or VTT subtitle file becomes statements with their clip times already set,
 and a plain-text file becomes one statement per paragraph. Imported statements
 arrive public, marked probable, attributed to the testimony's first narrator, and
@@ -199,9 +229,10 @@ unanchored; reattributing, anchoring, and consent remain your work.
 - **Anchor.** A point on the map, a point on the 3D model, or both (see below).
 - **Consent** and **sovereignty** (see below).
 
-The statement's row and the transcript show badges for its consent, its certainty,
-and its anchors (a **MODEL** badge, a **MAP** badge, a **LABEL** badge when a
-sovereignty label applies).
+The transcript reads out, in words, each statement's consent, its certainty, and
+its anchors (anchored in the model, on the map, or both), and says "withheld by a
+label" in red when a sovereignty label applies. The statement's row in the outline
+gives its consent, or **Label** in red for a label that withholds it.
 
 ### Anchoring a statement
 
@@ -216,7 +247,7 @@ pick it.
 
 A statement can also carry a **3D viewpoint**: frame the shot in the Model view
 (orbit and zoom until the framing says what the statement says), then press
-**Capture viewpoint** in the statement editor. From then on, selecting the
+**Capture viewpoint** in the statement editor or in the tool bar. From then on, selecting the
 statement flies the camera to that saved pose before releasing it to your hand.
 Recapture replaces the pose; Clear removes it.
 
@@ -224,7 +255,8 @@ Recapture replaces the pose; Clear removes it.
 
 Each statement carries:
 
-- A **consent level**: public, protected, or embargoed.
+- A **consent level**: public, restricted, or embargoed, chosen in the editor
+  under "Who may see this statement", each level with its meaning beside it.
 - A **sovereignty** block: a **rights holder** and optional **labels**. A label
   marked as restricting (for example a community-use label, "shared for the
   community, not for open publication") withholds the statement from anything
@@ -250,10 +282,11 @@ its hash, to protect the voice.
 
 ## The three views
 
-The view switcher (**Transcript / Model / Map**) changes the stage:
+The stage switch in the tool bar (**Transcript**, **Model**, **Map**, also in the
+View menu) changes the stage:
 
 - **Transcript** is the account read in order, each statement timecoded to its
-  clip, with its narrator, consent, certainty, and anchor badges. This is the
+  clip, with its narrator and, in words, its consent, certainty, and anchors. This is the
   default reading.
 - **Model** is the 3D massing of the site. Drag to orbit, scroll to zoom; the
   statement anchors sit in the space, and selecting a statement orbits to it. The
@@ -261,7 +294,7 @@ The view switcher (**Transcript / Model / Map**) changes the stage:
   memory against a wall or a corner.
 - **Map** places the statement anchors and the testimony place on a retrievable
   basemap, satellite imagery by default. Selecting a statement flies to its
-  anchor. The basemap picker, the place search, and the measure tool are covered
+  anchor. The Ground control, the place search, and the measure tool are covered
   in [the next section](#the-map-basemap-search-and-measure).
 
 The Model and Map are drawn live in the browser; on a very first switch in some
@@ -278,25 +311,26 @@ quirk of a backgrounded canvas, not a fault in the data.
 
 The Map view carries its own small toolkit, added in 1.3.0.
 
-**Basemap.** The picker at the top right chooses the ground: **Satellite** (Esri
+**Basemap.** The **Ground** control in the tool bar chooses the ground: **Satellite** (Esri
 World Imagery, tokenless, the default), **Streets** (OpenStreetMap), **Topo**
 (Esri topographic with hillshade), **Grid** (the offline graticule; nothing is
 fetched), or **File** (a local `.pmtiles` basemap; nothing is fetched). A
-**Labels** toggle overlays place names on the online grounds; the offline Grid
+**Place labels** toggle overlays place names on the online grounds; the offline Grid
 and File grounds ignore it, so they stay fetch-free.
 
-**Dated imagery.** With Satellite active, the **Imagery** menu switches from the
+**Dated imagery.** With Satellite active, the **Imagery date** choice switches from the
 live mosaic to a dated release of the Esri World Imagery Wayback archive. A
 testimony about 1992 can be read against imagery from a chosen date rather than
 today's, which is often the whole point.
 
-**Search.** The search box takes a place name or a bare coordinate. A typed
+**Search.** The search box at the right of the tool bar takes a place name or a bare coordinate. A typed
 `lat, lng` resolves locally with no network call; a place name is sent to the
 Nominatim (OpenStreetMap) geocoder, and picking a result flies the map there.
 
-**Measure.** The Measure button starts a path: click to add points, and the
-readout gives the running distance in metres; a third point closes the figure and
-adds its area. Undo, Clear, and Done are in the readout. Measurements are a
+**Measure.** The Measure tool starts a path: click to add points, and the card
+over the map gives the running distance in metres; a third point closes the figure
+and adds its area. Undo, Clear, and Done are on the card. The map also carries a
+key and a scale bar. Measurements are a
 reading aid; they are not saved to the project.
 
 **What retrieval discloses.** Tile requests disclose the tile coordinates of the
@@ -311,7 +345,7 @@ project data is ever part of these requests. Grid and File fetch nothing at all.
 Three controls govern what may publish, all enforced by the boundary rather than
 by discipline:
 
-- A statement's **consent level** (public, protected, embargoed).
+- A statement's **consent level** (public, restricted, embargoed).
 - A statement's **sovereignty labels** (a restricting label withholds it).
 - A narrator's **identity consent** (restricted names are aliased).
 - A point's **safe to publish** flag, and the model's own consent.
@@ -337,7 +371,7 @@ and a protected location all fall away at the boundary, together.
 
 ## Publishing
 
-**Publish** in the topbar runs the testimony through the consent boundary and opens
+**Publish** in the title bar runs the testimony through the consent boundary and opens
 a dialog showing what publishes (statements and narrators surviving out of the
 totals), a plain-language list of everything withheld (statements dropped by
 consent or by label, the narrator aliased, the recording cited by hash, the
@@ -355,18 +389,19 @@ consent disclosure. It opens offline and hosts anywhere.
 
 ## Saving and sharing projects
 
-- **Export** saves the whole project as a single `.testimony.json` file, media
-  included, so it round-trips exactly.
-- **Import** loads a project file back.
+- **Case**, then **Save project file**, saves the whole project as a single
+  `.testimony.json` file, media included, so it round-trips exactly.
+- **Case**, then **Open project file**, loads a project file back.
 
 ---
 
 ## Starting over: New and Reset
 
-- **New** starts an empty testimony (one unnamed narrator, no statements). It
-  confirms in two steps in the toolbar; export first to keep the current one.
-- **Reset** replaces the current testimony with the fictional sample, the same
-  two-step confirm.
+- **Case**, then **New testimony**, starts an empty testimony (one unnamed
+  narrator, no statements). It asks you to confirm; save first to keep the
+  current one.
+- **Case**, then **Reset to the sample**, replaces the current testimony with the
+  fictional sample, after the same confirmation.
 
 ---
 
@@ -391,8 +426,8 @@ consent disclosure. It opens offline and hosts anywhere.
 ## Keyboard and accessibility
 
 The rail's narrator and statement rows are reachable by keyboard (tab, then Enter
-or Space, with a visible focus ring); a narrator row's filter button keeps its own
-behaviour. Text direction is detected per string, so right-to-left statements
+or Space, with a visible focus ring). The menus open with a click and move with the arrow
+keys; Escape closes them. Text direction is detected per string, so right-to-left statements
 display correctly. The model and map are pointer-driven (orbit, pan, zoom).
 
 ---

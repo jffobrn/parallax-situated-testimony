@@ -6,7 +6,7 @@ import {
   narratorOf,
   statementText,
 } from '../lib/derive'
-import { CertaintyBadge, ConsentBadge, Dir } from '../components/ui'
+import { CertaintyBadge, ConsentBadge, Dir, Meta } from '../components/ui'
 
 function fmtClock(sec: number | undefined): string {
   if (sec === undefined || !Number.isFinite(sec)) return ''
@@ -88,6 +88,7 @@ function StatementBlock({
 }) {
   const restricting = hasRestrictingLabel(statement.sovereignty)
   const text = statementText(statement)
+  const anchors = [statement.anchor?.model && 'in the model', statement.anchor?.geo && 'on the map'].filter(Boolean)
   return (
     <div
       ref={registerRef}
@@ -100,20 +101,25 @@ function StatementBlock({
       onMouseLeave={() => useStore.getState().hover(null)}
     >
       <div className="ts-gutter mono">
-        {statement.clip ? (
-          <span className="ts-time">{fmtClock(statement.clip.startSec)}</span>
-        ) : (
-          <span className="ts-time faint">--:--</span>
-        )}
+        {statement.clip && <span className="ts-time">{fmtClock(statement.clip.startSec)}</span>}
       </div>
       <div className="ts-body">
         <div className="ts-meta">
           <span className="ts-narrator">{narratorName}</span>
-          <ConsentBadge consent={statement.consent} />
-          <CertaintyBadge certainty={statement.certainty} />
-          {statement.anchor?.model && <span className="ts-anchor" title="anchored in the model">model</span>}
-          {statement.anchor?.geo && <span className="ts-anchor" title="anchored on the map">map</span>}
-          {restricting && <span className="badge badge-embargoed" title="a sovereignty label withholds this from publication">label</span>}
+          <span className="ts-facts">
+            <Meta
+              parts={[
+                <ConsentBadge key="c" consent={statement.consent} />,
+                <CertaintyBadge key="k" certainty={statement.certainty} />,
+                anchors.length ? `anchored ${anchors.join(' and ')}` : null,
+                restricting ? (
+                  <span key="l" className="alert" title="A sovereignty label withholds this from publication">
+                    withheld by a label
+                  </span>
+                ) : null,
+              ]}
+            />
+          </span>
         </div>
         <p className="ts-text">
           {text ? <Dir text={text} /> : <span className="faint">Empty statement.</span>}

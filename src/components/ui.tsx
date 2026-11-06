@@ -1,5 +1,5 @@
 import * as Select from '@radix-ui/react-select'
-import type { KeyboardEvent, ReactNode } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import {
   dirOf,
   type Certainty,
@@ -55,7 +55,7 @@ export function Field({
     <div className="field">
       <label className="label">{label}</label>
       {children}
-      {hint && <span className="faint" style={{ fontSize: 11 }}>{hint}</span>}
+      {hint && <span className="faint" style={{ fontSize: 13 }}>{hint}</span>}
     </div>
   )
 }
@@ -129,7 +129,7 @@ export function Toggle({
       <span className="switch-track">
         <span className="switch-thumb" />
       </span>
-      {label && <span style={{ fontSize: 12 }}>{label}</span>}
+      {label && <span style={{ fontSize: 14 }}>{label}</span>}
     </button>
   )
 }
@@ -150,7 +150,9 @@ export function SelectMenu<T extends string>({
     <Select.Root value={value} onValueChange={(v) => onChange(v as T)}>
       <Select.Trigger className="select-trigger" aria-label={ariaLabel}>
         <Select.Value />
-        <Select.Icon>▾</Select.Icon>
+        <Select.Icon>
+          <span className="select-chevron" aria-hidden="true" />
+        </Select.Icon>
       </Select.Trigger>
       <Select.Portal>
         <Select.Content className="select-content" position="popper" sideOffset={4}>
@@ -167,31 +169,205 @@ export function SelectMenu<T extends string>({
   )
 }
 
+const CONSENT_WORD: Record<Consent, string> = {
+  public: 'Public',
+  restricted: 'Restricted',
+  embargoed: 'Embargoed',
+}
+const CERTAINTY_WORD: Record<Certainty, string> = {
+  attested: 'Attested',
+  probable: 'Probable',
+  uncertain: 'Uncertain',
+}
+
+/** Consent as a word in the running text; withheld states read in the alert colour. */
 export function ConsentBadge({ consent }: { consent: Consent }) {
-  return <span className={`badge badge-${consent}`}>{consent}</span>
+  return <span className={`badge badge-${consent}`}>{CONSENT_WORD[consent]}</span>
 }
 
 export function CertaintyBadge({ certainty }: { certainty: Certainty }) {
-  return <span className={`badge badge-${certainty}`}>{certainty}</span>
+  return <span className={`badge badge-${certainty}`}>{CERTAINTY_WORD[certainty]}</span>
 }
 
 const ROLE_LABEL: Record<NarratorRole, string> = {
-  witness: 'WITNESS',
-  survivor: 'SURVIVOR',
-  artist: 'ARTIST',
-  elder: 'ELDER',
-  family: 'FAMILY',
-  expert: 'EXPERT',
-  official: 'OFFICIAL',
-  other: 'OTHER',
+  witness: 'Witness',
+  survivor: 'Survivor',
+  artist: 'Artist',
+  elder: 'Elder',
+  family: 'Family member',
+  expert: 'Expert',
+  official: 'Official',
+  other: 'Other',
+}
+
+export function roleLabel(role: NarratorRole): string {
+  return ROLE_LABEL[role]
 }
 
 export function RoleBadge({ role }: { role: NarratorRole }) {
+  return <span>{ROLE_LABEL[role]}</span>
+}
+
+/** Words joined with a middle dot, skipping the empty ones: "Witness · Public". */
+export function Meta({ parts }: { parts: ReactNode[] }) {
+  const kept = parts.filter((p) => p !== null && p !== undefined && p !== false && p !== '')
   return (
-    <span className="row-sub" style={{ margin: 0 }}>
-      <span className="kind-dot" />
-      {ROLE_LABEL[role]}
-    </span>
+    <>
+      {kept.map((p, i) => (
+        <span key={i}>
+          {i > 0 && ' · '}
+          {p}
+        </span>
+      ))}
+    </>
+  )
+}
+
+/** What each consent level means for a statement or a model. */
+export const CONSENT_MEANING: Record<Consent, string> = {
+  public: 'Published with the testimony.',
+  restricted: 'Kept in the project; never published.',
+  embargoed: 'Held for the account only; never published.',
+}
+
+/** What each consent level means for a narrator's identity. */
+export const IDENTITY_MEANING: Record<Consent, string> = {
+  public: 'Named in the published testimony.',
+  restricted: 'Reduced to an alias (Narrator A) in anything published; name and affiliation withheld.',
+  embargoed: 'Reduced to an alias in anything published; name and affiliation withheld.',
+}
+
+/** Consent as a choice, each option with its meaning beside it. */
+export function ConsentChoice({
+  value,
+  onChange,
+  meanings = CONSENT_MEANING,
+  label = 'Who may see this',
+}: {
+  value: Consent
+  onChange: (c: Consent) => void
+  meanings?: Record<Consent, string>
+  label?: string
+}) {
+  return (
+    <div className="choice" role="radiogroup" aria-label={label}>
+      {(Object.keys(CONSENT_WORD) as Consent[]).map((c) => (
+        <button
+          key={c}
+          type="button"
+          role="radio"
+          className="choice-item"
+          aria-checked={value === c}
+          data-tone={c === 'public' ? undefined : 'alert'}
+          onClick={() => onChange(c)}
+        >
+          <span className="choice-dot" aria-hidden="true" />
+          <span>
+            <span className="choice-name">{CONSENT_WORD[c]}</span>
+            <span className="choice-desc">{meanings[c]}</span>
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export interface MenuEntry {
+  label: string
+  hint?: string
+  onSelect?: () => void
+  checked?: boolean
+  danger?: boolean
+  heading?: boolean
+  separator?: boolean
+  disabled?: boolean
+}
+
+/**
+ * A small accessible menu: a button that opens a list of actions. Escape and a
+ * click outside close it; arrow keys move between items.
+ */
+export function Menu({
+  label,
+  entries,
+  align = 'right',
+}: {
+  label: string
+  entries: MenuEntry[]
+  /** Which edge of the button the list lines up with. */
+  align?: 'left' | 'right'
+}) {
+  const [open, setOpen] = useState(false)
+  const wrap = useRef<HTMLDivElement | null>(null)
+  const button = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown)
+    const first = wrap.current?.querySelector<HTMLButtonElement>('.menu-item:not(:disabled)')
+    first?.focus()
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [open])
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setOpen(false)
+      button.current?.focus()
+      return
+    }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+    e.preventDefault()
+    const items = Array.from(wrap.current?.querySelectorAll<HTMLButtonElement>('.menu-item:not(:disabled)') ?? [])
+    const i = items.indexOf(document.activeElement as HTMLButtonElement)
+    const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length
+    items[next]?.focus()
+  }
+
+  return (
+    <div className="menu-wrap" ref={wrap} onKeyDown={onKey}>
+      <button
+        ref={button}
+        type="button"
+        className="menu-btn"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {label}
+      </button>
+      {open && (
+        <div className={`menu menu-${align}`} role="menu" aria-label={label}>
+          {entries.map((e, i) =>
+            e.separator ? (
+              <div key={i} className="menu-sep" role="separator" />
+            ) : e.heading ? (
+              <div key={i} className="menu-heading">
+                {e.label}
+              </div>
+            ) : (
+              <button
+                key={i}
+                type="button"
+                role={e.checked === undefined ? 'menuitem' : 'menuitemradio'}
+                aria-checked={e.checked}
+                className={`menu-item${e.danger ? ' danger' : ''}`}
+                disabled={e.disabled}
+                onClick={() => {
+                  setOpen(false)
+                  e.onSelect?.()
+                }}
+              >
+                <span>{e.label}</span>
+                {e.hint && <span className="hint">{e.hint}</span>}
+              </button>
+            ),
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -249,9 +425,10 @@ export function LocalizedTextEditor({
             className="btn btn-sm btn-ghost"
             onClick={() => remove(i)}
             disabled={value.length <= 1}
-            aria-label="remove language"
+            aria-label="Remove this language"
+            title="Remove this language"
           >
-            &times;
+            Remove
           </button>
         </div>
       ))}
@@ -264,22 +441,22 @@ export function LocalizedTextEditor({
 
 // Shared option lists.
 export const CONSENT_OPTIONS: EnumOption<Consent>[] = [
-  { value: 'public', label: 'PUBLIC' },
-  { value: 'restricted', label: 'RESTRICTED' },
-  { value: 'embargoed', label: 'EMBARGOED' },
+  { value: 'public', label: 'Public' },
+  { value: 'restricted', label: 'Restricted' },
+  { value: 'embargoed', label: 'Embargoed' },
 ]
 
 export const CERTAINTY_OPTIONS: EnumOption<Certainty>[] = [
-  { value: 'attested', label: 'ATTESTED' },
-  { value: 'probable', label: 'PROBABLE' },
-  { value: 'uncertain', label: 'UNCERTAIN' },
+  { value: 'attested', label: 'Attested' },
+  { value: 'probable', label: 'Probable' },
+  { value: 'uncertain', label: 'Uncertain' },
 ]
 
 export const PRECISION_OPTIONS = [
-  { value: 'minute', label: 'MIN' },
-  { value: 'hour', label: 'HOUR' },
-  { value: 'day', label: 'DAY' },
-  { value: 'approximate', label: 'APPROX' },
+  { value: 'minute', label: 'Minute' },
+  { value: 'hour', label: 'Hour' },
+  { value: 'day', label: 'Day' },
+  { value: 'approximate', label: 'Approximate' },
 ] as const
 
 export const SUBJECT_OPTIONS: EnumOption<TestimonySubject>[] = [

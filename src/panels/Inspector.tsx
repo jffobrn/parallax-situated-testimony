@@ -1,9 +1,18 @@
 import { useStore } from '../state/store'
-import { ConsentBadge, Dir } from '../components/ui'
-import { statementSnippet } from '../lib/derive'
+import { ConsentBadge, Dir, roleLabel } from '../components/ui'
+import { narratorOf, statementSnippet } from '../lib/derive'
 import { StatementEditor } from './StatementEditor'
 import { NarratorEditor } from './NarratorEditor'
 import { TestimonyEditor } from './TestimonyEditor'
+
+function PaneHead({ where }: { where: string }) {
+  return (
+    <div className="pane-head">
+      <span>Properties</span>
+      <span className="faint" style={{ fontWeight: 400 }}>{where}</span>
+    </div>
+  )
+}
 
 /**
  * The inspector shows one of three things, in priority order: the selected
@@ -22,17 +31,24 @@ export function Inspector() {
     : undefined
 
   if (statement) {
+    const by = narratorOf(project, statement)
     return (
       <>
-        <div className="panel-head">
-          <span className="label"><span className="label-num">ST</span>Statement</span>
-          <ConsentBadge consent={statement.consent} />
-        </div>
-        <div className="inspector-title">
-          <Dir text={statementSnippet(statement, 70)} />
+        <PaneHead where={`Statement ${project.statements.indexOf(statement) + 1} of ${project.statements.length}`} />
+        <div className="inspector-head">
+          <div className="kicker">
+            <span>
+              Statement{by ? ', ' : ''}
+              {by && <Dir text={`by ${by.name?.trim() || 'an unnamed narrator'}`} />}
+            </span>
+            <ConsentBadge consent={statement.consent} />
+          </div>
+          <div className="inspector-title">
+            <Dir text={statementSnippet(statement, 70)} />
+          </div>
         </div>
         <div className="scroll-y grow">
-          <StatementEditor statement={statement} />
+          <StatementEditor key={statement.id} statement={statement} />
         </div>
       </>
     )
@@ -41,12 +57,20 @@ export function Inspector() {
   if (narrator) {
     return (
       <>
-        <div className="panel-head">
-          <span className="label"><span className="label-num">NR</span>Narrator</span>
-          <ConsentBadge consent={narrator.identityConsent} />
+        <PaneHead
+          where={`Narrator ${project.testimony.narrators.indexOf(narrator) + 1} of ${project.testimony.narrators.length}`}
+        />
+        <div className="inspector-head">
+          <div className="kicker">
+            <span>Narrator, {roleLabel(narrator.role).toLowerCase()}</span>
+            <ConsentBadge consent={narrator.identityConsent} />
+          </div>
+          <div className="inspector-title">
+            <Dir text={narrator.name?.trim() || 'Unnamed narrator'} />
+          </div>
         </div>
         <div className="scroll-y grow">
-          <NarratorEditor narrator={narrator} />
+          <NarratorEditor key={narrator.id} narrator={narrator} />
         </div>
       </>
     )
@@ -54,9 +78,7 @@ export function Inspector() {
 
   return (
     <>
-      <div className="panel-head">
-        <span className="label"><span className="label-num">TS</span>Testimony</span>
-      </div>
+      <PaneHead where="Testimony" />
       <div className="scroll-y grow">
         <TestimonyEditor />
       </div>

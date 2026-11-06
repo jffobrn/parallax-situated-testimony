@@ -68,7 +68,9 @@ const clickIn = (scope, pattern) =>
     return true
   }, scope, pattern.source)
 const readout = () =>
-  page.evaluate(() => (document.querySelector('.readout')?.textContent || '').replace(/\s+/g, ' ').trim())
+  page.evaluate(() =>
+    ((document.querySelector('.status-right') || document.querySelector('.readout'))?.textContent || '').replace(/\s+/g, ' ').trim(),
+  )
 const strip = (s) => s.replace(/(Reset to the sample|New blank [a-z]+)\.?/i, '').trim().slice(0, 40)
 
 try {
@@ -124,17 +126,55 @@ try {
   await page.keyboard.press('Escape')
   await sleep(500)
 
-  if (await clickIn('.topbar button', /^new$/)) {
+  // New and Reset: from the Case menu with a confirmation dialog (Colour field
+  // and Workbench tools), or from two-step top-bar buttons (older tools).
+  const hasCaseMenu = await page.evaluate(() =>
+    [...document.querySelectorAll('.topbar button')].some((b) => b.textContent.trim() === 'Case'),
+  )
+  const caseAction = async (item, confirm) => {
+    await clickIn('.topbar button', /^case$/)
+    await sleep(200)
+    await clickIn('.menu-item', item)
     await sleep(300)
-    await clickIn('.topbar button', /^confirm new$/)
+    await clickIn('[role=dialog] button', confirm)
+  }
+  if (hasCaseMenu) {
+    await caseAction(/^new [a-z]+$/, /^start new$/)
     await sleep(1500)
     check('New empties', /\b0\b/.test(await readout()))
+    await caseAction(/^reset to the sample$/, /^reset to the sample$/)
+    await sleep(2500)
+    check('Reset restores the sample', strip(await readout()) === strip(r0))
+    // Appearance lives in the View menu where there is one, else in Case.
+    const before = pageErrors.length
+    const appearanceMenu = (await page.evaluate(() =>
+      [...document.querySelectorAll('.topbar button')].some((b) => b.textContent.trim() === 'View'),
+    ))
+      ? /^view$/
+      : /^case$/
+    await clickIn('.topbar button', appearanceMenu)
+    await sleep(200)
+    await clickIn('.menu-item', /^dark$/)
+    await sleep(800)
+    const dark = await page.evaluate(() => document.documentElement.dataset.theme === 'dark')
+    await clickIn('.topbar button', appearanceMenu)
+    await sleep(200)
+    await clickIn('.menu-item', /^match the system$/)
+    await sleep(500)
+    check('appearance switches', dark && pageErrors.length === before)
+  } else {
+    if (await clickIn('.topbar button', /^new$/)) {
+      await sleep(300)
+      await clickIn('.topbar button', /^confirm new$/)
+      await sleep(1500)
+      check('New empties', /\b0\b/.test(await readout()))
+    }
+    await clickIn('.topbar button', /^reset$/)
+    await sleep(300)
+    await clickIn('.topbar button', /^confirm reset$/)
+    await sleep(2500)
+    check('Reset restores the sample', strip(await readout()) === strip(r0))
   }
-  await clickIn('.topbar button', /^reset$/)
-  await sleep(300)
-  await clickIn('.topbar button', /^confirm reset$/)
-  await sleep(2500)
-  check('Reset restores the sample', strip(await readout()) === strip(r0))
 
   await sleep(800)
   await page.reload({ waitUntil: 'networkidle2', timeout: 90000 })

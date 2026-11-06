@@ -12,13 +12,13 @@ export function AboutDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="dialog-content ticks">
+        <Dialog.Content className="dialog-content">
           <Dialog.Title className="dialog-title">
-            {APP_NAME} <span className="faint">// {SUITE_NAME}</span>
+            {APP_NAME} <span className="faint">in {SUITE_NAME}</span>
           </Dialog.Title>
           <Dialog.Description className="dialog-desc">{TAGLINE}</Dialog.Description>
 
-          <div className="prose" style={{ fontSize: 13 }}>
+          <div className="prose">
             <p style={{ marginBottom: 12 }}>
               Situated Testimony records an account as a sequence of time-coded
               statements and anchors each one in space: a point on a 3D model and a
@@ -27,7 +27,7 @@ export function AboutDialog({
               back inside the place and recording where a memory attaches.
             </p>
 
-            <span className="label">Three readings, one account</span>
+            <h3 className="sec-title">Three readings, one account</h3>
             <p style={{ margin: '6px 0 12px' }}>
               Transcript, Model, and Map are three readings of the same statements,
               linked to a chronology and a recording transport. Scrub the recording
@@ -35,7 +35,7 @@ export function AboutDialog({
               to its place, and the chronology highlights its moment.
             </p>
 
-            <span className="label">Consent and sovereignty by design</span>
+            <h3 className="sec-title">Consent and sovereignty by design</h3>
             <p style={{ margin: '6px 0 12px' }}>
               One boundary function produces every export and every published view.
               It drops restricted and embargoed statements, withholds statements
@@ -47,7 +47,7 @@ export function AboutDialog({
 
             <div className="note-box">{DISCLAIMER}</div>
 
-            <p className="faint" style={{ marginTop: 12, fontSize: 12 }}>
+            <p className="faint" style={{ marginTop: 12, fontSize: 13 }}>
               Runs entirely in your browser. The project and its media stay on your
               machine in local storage; nothing is uploaded. The 3D model loads from
               a local file, and the basemap fetches no tiles. The bundled sample is

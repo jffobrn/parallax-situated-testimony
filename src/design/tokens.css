@@ -1,89 +1,190 @@
 /*
- * Parallax design tokens (shared core).
+ * Parallax design tokens (shared core): Workbench.
  *
- * A deliberately authored, screen-native forensic identity: the situation room,
- * not a dashboard. Near-black cool neutrals, hairline structure, a single amber
- * signal reserved for the crossing and for findings, and a red used only for
- * protection and danger. Monospace carries the apparatus (coordinates,
- * bearings, timestamps, hashes); the sans carries the voice. These variables are
- * the suite's palette; later Parallax tools import this file unchanged.
+ * The instruments are working software, so they look like it: neutral warm
+ * greys, dense but legible type, panes with plain headers, and colour only
+ * where it means something. Violet is the selection thread; raspberry marks
+ * what the evidence converges on (the crossing, findings); red is kept for
+ * protection and danger. Archivo carries the interface; IBM Plex Mono carries
+ * only data. Light by default; dark follows the system unless the viewer
+ * chooses, which sets data-theme on the root.
  */
 
+@font-face { font-family: 'Archivo'; src: url('./fonts/archivo-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Archivo'; src: url('./fonts/archivo-500.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Archivo'; src: url('./fonts/archivo-600.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Archivo'; src: url('./fonts/archivo-700.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Plex Mono'; src: url('./fonts/plex-mono-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Plex Mono'; src: url('./fonts/plex-mono-500.woff2') format('woff2'); font-weight: 500 600; font-display: swap; }
+
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
   /* Type */
-  --font-sans: 'Archivo', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  --font-display: 'Archivo', system-ui, sans-serif;
+  --font-sans: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Plex Mono', 'SF Mono', Menlo, Consolas, monospace;
+  --font-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
   --font-arabic: 'Noto Naskh Arabic', 'Archivo', serif;
 
-  /* Neutrals: cool near-black, layered surfaces, hairline lines */
-  --bg: #07090c;
-  --bg-1: #0b0e13;
-  --bg-2: #10141b;
-  --bg-3: #161b24;
-  --bg-4: #1d2430;
-  --line: #1b212b;
-  --line-2: #262f3b;
-  --line-strong: #38424f;
+  --field: #e4e2dc;
+  --field-2: #d9d6ce;
+  --surface: #f3f2ee;
+  --surface-2: #f3f2ee;
+  --surface-3: #e9e7e1;
+  --panel-head: #e9e7e1;
+  --input: #ffffff;
+  --map-ground: #e8e6e0;
+  --bg-4: #dedbd3;
+  --line: #e1ded6;
+  --line-2: #cfccc3;
+  --line-strong: #b3afa4;
+  --text: #1b1a18;
+  --text-2: #4a4842;
+  --text-3: #66635b;
+  --text-faint: #8f8b82;
+  --primary: #5a1666;
+  --primary-ink: #ffffff;
+  --primary-hover: #6e2280;
+  --select: #e7d6ee;
+  --select-ink: #1b1a18;
+  --select-line: #5a1666;
+  --signal: #5a1666;
+  --signal-bright: #5a1666;
+  --signal-dim: #9a6aa6;
+  --signal-wash: rgba(90, 22, 102, 0.07);
+  --signal-line: rgba(90, 22, 102, 0.32);
+  --mark: #c2185b;
+  --mark-wash: rgba(194, 24, 91, 0.08);
+  --alert: #b3261e;
+  --alert-bright: #b3261e;
+  --alert-dim: #e2a29d;
+  --alert-wash: #f8e9e7;
+  --subject: #5a1666;
+  --subject-wash: rgba(90, 22, 102, 0.12);
+  --vantage: #ffffff;
+  --ray: rgba(90, 22, 102, 0.5);
+  --shadow: 0 4px 14px rgba(27, 26, 24, 0.12);
+  --shadow-pop: 0 10px 30px rgba(27, 26, 24, 0.18);
 
-  --text: #e7ebf0;
-  --text-2: #a7b0bd;
-  --text-3: #6f7989;
-  --text-faint: #495160;
-
-  /* Signal: sodium amber. The crossing, findings, the active selection. */
-  --signal: #f3a93c;
-  --signal-bright: #ffc163;
-  --signal-dim: #9a6f2c;
-  --signal-wash: rgba(243, 169, 60, 0.12);
-  --signal-line: rgba(243, 169, 60, 0.42);
-
-  /* Alert / protection: embargo, unsafe coordinates, destructive actions only. */
-  --alert: #e5544b;
-  --alert-bright: #ff7a72;
-  --alert-dim: #97352f;
-  --alert-wash: rgba(229, 84, 75, 0.12);
-
-  /* Map roles, kept low-saturation so amber stays the one loud colour. */
-  --subject: #7fa8bf;
-  --subject-wash: rgba(127, 168, 191, 0.16);
-  --vantage: #d8d2c0;
-  --ray: rgba(216, 210, 192, 0.5);
+  /* Legacy surface names */
+  --bg: var(--field);
+  --bg-1: var(--surface);
+  --bg-2: var(--input);
+  --bg-3: var(--surface-3);
 
   /* Geometry */
-  --r-sm: 2px;
-  --r: 3px;
-  --r-lg: 5px;
+  --r-sm: 3px;
+  --r: 4px;
+  --r-lg: 6px;
 
-  --shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
-  --shadow-pop: 0 16px 50px rgba(0, 0, 0, 0.66);
-
-  /* Spacing scale */
   --s1: 4px;
   --s2: 8px;
   --s3: 12px;
   --s4: 16px;
-  --s5: 24px;
-  --s6: 32px;
-  --s7: 48px;
+  --s5: 20px;
+  --s6: 28px;
+  --s7: 40px;
 
-  /* Type scale */
-  --t-micro: 10px;
-  --t-xs: 11px;
+  /* Type scale: dense, never below 11px for meaning. */
+  --t-micro: 11px;
+  --t-xs: 12px;
   --t-sm: 12px;
   --t-base: 13px;
   --t-md: 14px;
-  --t-lg: 16px;
-  --t-xl: 20px;
-  --t-2xl: 26px;
+  --t-lg: 15px;
+  --t-xl: 17px;
+  --t-2xl: 22px;
+  --track: 0;
 
-  --track: 0.08em; /* letter-spacing for mono labels */
-
-  /* Layers */
   --z-panel: 10;
   --z-overlay: 50;
   --z-dialog: 100;
   --z-toast: 200;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --field: #262523;
+    --field-2: #302e2b;
+    --surface: #1e1d1b;
+    --surface-2: #1e1d1b;
+    --surface-3: #2a2926;
+    --panel-head: #2a2926;
+    --input: #151413;
+    --map-ground: #2b2a27;
+    --bg-4: #34322e;
+    --line: #2f2e2b;
+    --line-2: #3c3a36;
+    --line-strong: #57544e;
+    --text: #eeece7;
+    --text-2: #c9c6be;
+    --text-3: #a29e95;
+    --text-faint: #77746c;
+    --primary: #d7b4ea;
+    --primary-ink: #1b1a18;
+    --primary-hover: #e4c9f2;
+    --select: #3d2a45;
+    --select-ink: #eeece7;
+    --select-line: #d7b4ea;
+    --signal: #d7b4ea;
+    --signal-bright: #d7b4ea;
+    --signal-dim: #8f7a99;
+    --signal-wash: rgba(215, 180, 234, 0.08);
+    --signal-line: rgba(215, 180, 234, 0.34);
+    --mark: #ff6fa8;
+    --mark-wash: rgba(255, 111, 168, 0.1);
+    --alert: #ff8a80;
+    --alert-bright: #ff8a80;
+    --alert-dim: #7d3a35;
+    --alert-wash: rgba(255, 138, 128, 0.1);
+    --subject: #d7b4ea;
+    --subject-wash: rgba(215, 180, 234, 0.14);
+    --vantage: #eeece7;
+    --ray: rgba(235, 225, 240, 0.55);
+    --shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    --shadow-pop: 0 14px 40px rgba(0, 0, 0, 0.5);
+  }
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --field: #262523;
+  --field-2: #302e2b;
+  --surface: #1e1d1b;
+  --surface-2: #1e1d1b;
+  --surface-3: #2a2926;
+  --panel-head: #2a2926;
+  --input: #151413;
+  --map-ground: #2b2a27;
+  --bg-4: #34322e;
+  --line: #2f2e2b;
+  --line-2: #3c3a36;
+  --line-strong: #57544e;
+  --text: #eeece7;
+  --text-2: #c9c6be;
+  --text-3: #a29e95;
+  --text-faint: #77746c;
+  --primary: #d7b4ea;
+  --primary-ink: #1b1a18;
+  --primary-hover: #e4c9f2;
+  --select: #3d2a45;
+  --select-ink: #eeece7;
+  --select-line: #d7b4ea;
+  --signal: #d7b4ea;
+  --signal-bright: #d7b4ea;
+  --signal-dim: #8f7a99;
+  --signal-wash: rgba(215, 180, 234, 0.08);
+  --signal-line: rgba(215, 180, 234, 0.34);
+  --mark: #ff6fa8;
+  --mark-wash: rgba(255, 111, 168, 0.1);
+  --alert: #ff8a80;
+  --alert-bright: #ff8a80;
+  --alert-dim: #7d3a35;
+  --alert-wash: rgba(255, 138, 128, 0.1);
+  --subject: #d7b4ea;
+  --subject-wash: rgba(215, 180, 234, 0.14);
+  --vantage: #eeece7;
+  --ray: rgba(235, 225, 240, 0.55);
+  --shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 14px 40px rgba(0, 0, 0, 0.5);
 }

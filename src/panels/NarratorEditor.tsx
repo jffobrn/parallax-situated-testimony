@@ -1,13 +1,7 @@
 import { useState } from 'react'
 import { type Narrator } from '../core'
 import { useStore } from '../state/store'
-import { CONSENT_OPTIONS, Dir, EnumSeg, Field, ROLE_OPTIONS, SelectMenu } from '../components/ui'
-
-const IDENTITY_NOTE: Record<Narrator['identityConsent'], string> = {
-  public: 'Named in the published testimony.',
-  restricted: 'Reduced to an alias (Narrator A) in anything published; name and affiliation withheld.',
-  embargoed: 'Reduced to an alias in anything published; name and affiliation withheld.',
-}
+import { ConsentChoice, Field, IDENTITY_MEANING, ROLE_OPTIONS, SelectMenu } from '../components/ui'
 
 export function NarratorEditor({ narrator }: { narrator: Narrator }) {
   const [confirmDel, setConfirmDel] = useState(false)
@@ -44,19 +38,14 @@ export function NarratorEditor({ narrator }: { narrator: Narrator }) {
       </Field>
 
       <div className="divider" />
-      <span className="label">Identity consent</span>
+      <span className="label">Who may know this narrator</span>
       <div style={{ height: 6 }} />
-      <EnumSeg
+      <ConsentChoice
         value={narrator.identityConsent}
-        options={CONSENT_OPTIONS}
         onChange={(v) => patch({ identityConsent: v })}
+        meanings={IDENTITY_MEANING}
+        label="Who may know this narrator"
       />
-      <p
-        className={narrator.identityConsent === 'public' ? 'faint' : 'alert'}
-        style={{ fontSize: 11, marginTop: 6 }}
-      >
-        {IDENTITY_NOTE[narrator.identityConsent]}
-      </p>
 
       <div className="divider" />
       <Field label="Note" hint="Private. Never published.">
@@ -82,12 +71,12 @@ export function NarratorEditor({ narrator }: { narrator: Narrator }) {
           Delete narrator
         </button>
       )}
-      <p className="faint" style={{ fontSize: 11, marginTop: 8 }}>
+      <p className="faint" style={{ fontSize: 13, marginTop: 8 }}>
         Statements by a deleted narrator are kept but unassigned.
       </p>
       <div style={{ height: 8 }} />
       <div className="row-sub" style={{ padding: 0 }}>
-        <Dir text={narrator.name?.trim() || 'Unnamed'} /> &nbsp;/&nbsp; id {id}
+        Narrator id <span className="mono">{id}</span>
       </div>
     </div>
   )

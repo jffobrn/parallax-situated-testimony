@@ -1,4 +1,5 @@
-import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Edges, Html, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
@@ -7,12 +8,45 @@ import { useStore } from '../state/store'
 import { useMediaUrl } from '../state/useMediaUrl'
 import { activeStatementId, modelAnchors, statementSnippet } from '../lib/derive'
 import { viewpointBridge } from './viewpointBridge'
+import { token, useTheme, type Theme } from '../state/theme'
+import { MAP_TOOLS_SLOT, ToolIcon } from '../panels/Toolbar'
 
-const NEUTRAL = '#273140'
-const EDGE = '#5b6a80'
-const SIGNAL = '#f3a93c'
-const SIGNAL_BRIGHT = '#ffc163'
-const MARK = '#b8c2d0'
+/** Scene colours, read from the design tokens so the model follows the theme. */
+interface SceneColours {
+  ground: string
+  sea: string
+  massing: string
+  edge: string
+  gridMajor: string
+  gridMinor: string
+  sky: string
+  under: string
+  anchor: string
+  hover: string
+  focus: string
+}
+
+function readScene(theme: Theme): SceneColours {
+  const dark = theme === 'dark'
+  return {
+    ground: token(dark ? '--field' : '--field-2'),
+    sea: token(dark ? '--input' : '--line-strong'),
+    massing: token(dark ? '--line-strong' : '--surface'),
+    edge: token('--text-3'),
+    gridMajor: token('--line-strong'),
+    gridMinor: token('--line-2'),
+    sky: dark ? '#e6e2da' : '#f3f2ee',
+    under: token('--line-strong'),
+    anchor: token('--primary'),
+    hover: token('--signal-dim'),
+    focus: token('--mark'),
+  }
+}
+
+function useSceneColours(): SceneColours {
+  const theme = useTheme()
+  return useMemo(() => readScene(theme), [theme])
+}
 
 /**
  * The model view: the scene the testimony is situated in (a loaded glTF, or a
@@ -25,30 +59,34 @@ export function ModelView() {
   const model = useStore((s) => s.project.testimony.model)
   const placing = useStore((s) => s.placing)
   const placingHere = placing?.kind === 'statement-model'
+  const C = useSceneColours()
+  const [toolSlot, setToolSlot] = useState<HTMLElement | null>(null)
+  useEffect(() => setToolSlot(document.getElementById(MAP_TOOLS_SLOT)), [])
 
   return (
     <>
       <Canvas
         camera={{ position: [16, 13, 20], fov: 45, near: 0.1, far: 2000 }}
         gl={{ antialias: true }}
-        style={{ position: 'absolute', inset: 0, background: '#07090c' }}
+        style={{ position: 'absolute', inset: 0, background: 'var(--map-ground)' }}
       >
-        <hemisphereLight args={['#cdd6e2', '#0a0d12', 0.8]} />
-        <directionalLight position={[14, 22, 10]} intensity={1.4} />
+        <hemisphereLight key={`h-${C.sky}-${C.under}`} args={[C.sky, C.under, 0.8]} />
+        <directionalLight position={[14, 22, 10]} intensity={1.2} />
         <ambientLight intensity={0.45} />
-        <gridHelper args={[80, 40, '#5b6a80', '#1d2430']} position={[0, 0, 0]} />
+        <gridHelper key={`g-${C.gridMajor}-${C.gridMinor}`} args={[80, 40, C.gridMajor, C.gridMinor]} position={[0, 0, 0]} />
 
         <Suspense fallback={null}>
-          <Scene model={model} placing={placingHere} />
+          <Scene model={model} placing={placingHere} colours={C} />
         </Suspense>
 
-        <Anchors />
+        <Anchors colours={C} />
         <CameraRig />
         <ViewpointBridge />
 
         <OrbitControls makeDefault enableDamping dampingFactor={0.12} maxPolarAngle={Math.PI / 2.02} />
       </Canvas>
 
+      {toolSlot && createPortal(<ViewpointTool />, toolSlot)}
       <div className="stage-readout">{model?.title ?? 'Procedural massing'}</div>
       {placingHere && (
         <div className="map-banner">
@@ -58,10 +96,10 @@ export function ModelView() {
           </button>
         </div>
       )}
-      <div className="model-legend mono">
-        <div className="legend-row"><span className="sw sw-cross" /> anchor</div>
-        <div className="legend-row"><span className="sw" style={{ background: MARK }} /> statement</div>
-        <div className="legend-row faint">drag to orbit, scroll to zoom</div>
+      <div className="model-legend" aria-label="Model key">
+        <div className="legend-row"><span className="sw sw-anchor" /> Statement anchor</div>
+        <div className="legend-row"><span className="sw sw-sel" /> In focus</div>
+        <div className="legend-row faint">Drag to orbit, scroll to zoom</div>
       </div>
     </>
   )
@@ -74,45 +112,80 @@ function placeFromEvent(e: ThreeEvent<PointerEvent>, placing: boolean) {
   useStore.getState().applyModelPlacement({ x: e.point.x, y: e.point.y, z: e.point.z })
 }
 
-function Scene({ model, placing }: { model: SceneModel | undefined; placing: boolean }) {
+/**
+ * Save the live camera as the selected statement's viewpoint, from the tool bar.
+ * The same capture as the statement editor's button.
+ */
+function ViewpointTool() {
+  const selectedStatementId = useStore((s) => s.selectedStatementId)
+  const statement = useStore((s) => s.project.statements.find((x) => x.id === s.selectedStatementId))
+  const capture = () => {
+    if (!selectedStatementId) return
+    const vp = viewpointBridge.capture()
+    if (!vp) return
+    useStore.getState().updateStatement(selectedStatementId, { viewpoint: vp })
+    useStore.getState().notify('Viewpoint saved.')
+  }
+  return (
+    <button
+      className="tool"
+      disabled={!statement}
+      onClick={capture}
+      title={statement ? 'Save this camera as the selected statement\'s viewpoint' : 'Select a statement first'}
+    >
+      <ToolIcon name="camera" />
+      {statement?.viewpoint ? 'Recapture viewpoint' : 'Capture viewpoint'}
+    </button>
+  )
+}
+
+function Scene({
+  model,
+  placing,
+  colours,
+}: {
+  model: SceneModel | undefined
+  placing: boolean
+  colours: SceneColours
+}) {
   if (model?.kind === 'gltf' && model.file?.blobKey) {
     return <GltfScene blobKey={model.file.blobKey} placing={placing} />
   }
   if (model?.kind === 'gltf' && model.url) {
     return <GltfModel url={model.url} placing={placing} />
   }
-  return <ProceduralScene placing={placing} />
+  return <ProceduralScene placing={placing} colours={colours} />
 }
 
 /**
  * A neutral massing of the waterfront the sample is situated in: a ground plane,
  * a long sea wall, and a building behind it. Plainly schematic, not a survey.
  */
-function ProceduralScene({ placing }: { placing: boolean }) {
+function ProceduralScene({ placing, colours: C }: { placing: boolean; colours: SceneColours }) {
   const onDown = (e: ThreeEvent<PointerEvent>) => placeFromEvent(e, placing)
   return (
     <group onPointerDown={onDown}>
       {/* ground / quay */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[60, 40]} />
-        <meshStandardMaterial color="#11161e" roughness={1} />
+        <meshStandardMaterial color={C.ground} roughness={1} />
       </mesh>
 
       {/* sea (a darker strip on the south side) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 12]}>
         <planeGeometry args={[60, 16]} />
-        <meshStandardMaterial color="#0b1118" roughness={1} />
+        <meshStandardMaterial color={C.sea} roughness={1} />
       </mesh>
 
       {/* the sea wall: a long low wall the mural was painted on */}
-      <Massing args={[26, 2.4, 0.8]} position={[0, 1.2, 4]} />
+      <Massing colours={C} args={[26, 2.4, 0.8]} position={[0, 1.2, 4]} />
 
       {/* a building block set back from the wall */}
-      <Massing args={[9, 7, 7]} position={[-7, 3.5, -6]} />
+      <Massing colours={C} args={[9, 7, 7]} position={[-7, 3.5, -6]} />
       {/* a lower annex */}
-      <Massing args={[6, 4, 5]} position={[6, 2, -5]} />
+      <Massing colours={C} args={[6, 4, 5]} position={[6, 2, -5]} />
       {/* a stair / plinth by the wall */}
-      <Massing args={[3, 1, 2]} position={[10, 0.5, 3]} />
+      <Massing colours={C} args={[3, 1, 2]} position={[10, 0.5, 3]} />
     </group>
   )
 }
@@ -120,15 +193,17 @@ function ProceduralScene({ placing }: { placing: boolean }) {
 function Massing({
   args,
   position,
+  colours: C,
 }: {
   args: [number, number, number]
   position: [number, number, number]
+  colours: SceneColours
 }) {
   return (
     <mesh position={position} castShadow receiveShadow>
       <boxGeometry args={args} />
-      <meshStandardMaterial color={NEUTRAL} roughness={0.9} metalness={0} />
-      <Edges threshold={15} color={EDGE} />
+      <meshStandardMaterial color={C.massing} roughness={0.9} metalness={0} />
+      <Edges threshold={15} color={C.edge} />
     </mesh>
   )
 }
@@ -157,7 +232,7 @@ function GltfModel({ url, placing }: { url: string; placing: boolean }) {
   return <primitive object={gltf.scene} onPointerDown={onDown} />
 }
 
-function Anchors() {
+function Anchors({ colours }: { colours: SceneColours }) {
   const project = useStore((s) => s.project)
   const selectedStatementId = useStore((s) => s.selectedStatementId)
   const hoveredId = useStore((s) => s.hoveredId)
@@ -183,6 +258,7 @@ function Anchors() {
             emphasized={emph}
             hovered={hov}
             label={snippetById.get(mk.statementId) ?? ''}
+            colours={colours}
             onSelect={() => useStore.getState().selectStatement(mk.statementId)}
             onHover={(on) => useStore.getState().hover(on ? mk.statementId : null)}
           />
@@ -197,6 +273,7 @@ function AnchorMarker({
   emphasized,
   hovered,
   label,
+  colours: C,
   onSelect,
   onHover,
 }: {
@@ -204,10 +281,11 @@ function AnchorMarker({
   emphasized: boolean
   hovered: boolean
   label: string
+  colours: SceneColours
   onSelect: () => void
   onHover: (on: boolean) => void
 }) {
-  const color = emphasized ? SIGNAL_BRIGHT : hovered ? SIGNAL : MARK
+  const color = emphasized ? C.focus : hovered ? C.hover : C.anchor
   const r = emphasized ? 0.5 : 0.38
   return (
     <group position={[point.x, point.y, point.z]}>

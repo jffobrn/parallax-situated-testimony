@@ -33,7 +33,7 @@ async function clickWhere(page, selector, source) {
     el.click()
   }, selector, source)
 }
-const view = (page, name) => clickWhere(page, '.seg button', '^' + name + '$')
+const view = (page, name) => clickWhere(page, '.stage-switch button', '^' + name + '$')
 const click = (page, name) => clickWhere(page, 'button', name)
 
 const browser = await puppeteer.launch({
@@ -48,6 +48,8 @@ const browser = await puppeteer.launch({
 
 const page = await browser.newPage()
 await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 })
+// The guide shows the default light mode, whatever the host's setting.
+await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }])
 await page.goto(URL_BASE, { waitUntil: 'networkidle0', timeout: 60000 })
 await page.waitForSelector('.topbar', { timeout: 30000 })
 await page.evaluate(() => window.dispatchEvent(new Event('resize')))

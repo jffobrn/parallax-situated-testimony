@@ -9,6 +9,8 @@
  * via print CSS, a print dossier.
  */
 
+import archivo400 from '../design/fonts/archivo-400.woff2?inline'
+import archivo600 from '../design/fonts/archivo-600.woff2?inline'
 import {
   APP_NAME,
   AUTHOR,
@@ -27,14 +29,18 @@ import {
 } from '../core'
 
 const ROLE_LABEL: Record<NarratorRole, string> = {
-  witness: 'witness',
-  survivor: 'survivor',
-  artist: 'artist',
-  elder: 'elder',
-  family: 'family',
-  expert: 'expert',
-  official: 'official',
-  other: 'narrator',
+  witness: 'Witness',
+  survivor: 'Survivor',
+  artist: 'Artist',
+  elder: 'Elder',
+  family: 'Family member',
+  expert: 'Expert',
+  official: 'Official',
+  other: 'Narrator',
+}
+
+function cap(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s
 }
 
 const SUBJECT_ARTICLE: Record<string, string> = {
@@ -67,9 +73,9 @@ function fmtClock(sec: number | undefined): string {
 
 function labelChips(labels: PublicLabel[]): string {
   if (!labels.length) return ''
-  return `<div class="labels">${labels
+  return `<p class="labels">Labels: ${labels
     .map((l) => `<span class="lbl" title="${esc(l.note)}">${esc(l.text)}</span>`)
-    .join('')}</div>`
+    .join(', ')}</p>`
 }
 
 // --- Narrators -------------------------------------------------------------
@@ -94,12 +100,13 @@ function buildNarrators(pub: PublicProject): string {
 
 function anchorNote(st: PublicStatement): string {
   const parts: string[] = []
-  if (st.anchor?.model) parts.push('anchored in the model')
+  if (st.anchor?.model) parts.push('Anchored in the model')
   if (st.anchor?.geo) {
     const g = st.anchor.geo
-    parts.push(`${formatLatLng(g.lat, g.lng)}${g.coarsened ? ' (approx)' : ''}`)
+    parts.push(`on the map at ${formatLatLng(g.lat, g.lng)}${g.coarsened ? ' (approximate)' : ''}`)
   }
-  return parts.join(' / ')
+  if (parts.length === 1 && parts[0].startsWith('on the map')) return cap(`anchored ${parts[0]}`)
+  return parts.join(' and ')
 }
 
 function buildTranscript(pub: PublicProject): string {
@@ -119,7 +126,7 @@ function buildTranscript(pub: PublicProject): string {
         <div class="st-body">
           <div class="st-meta">
             ${name ? `<span class="st-narrator"${dirAttr(name)}>${esc(name)}</span>` : ''}
-            <span class="st-cert">${esc(st.certainty)}</span>
+            <span class="st-cert">${esc(cap(st.certainty))}</span>
             ${refers ? `<span class="st-refers">${esc(refers)}</span>` : ''}
           </div>
           <p class="st-text"${dirAttr(text)}>${esc(text)}</p>
@@ -220,14 +227,14 @@ function buildModel(pub: PublicProject): string {
   if (!m) return ''
   const anchored = pub.statements.filter((s) => s.anchor?.model).length
   const rows: string[] = []
-  rows.push(`<dt>title</dt><dd${dirAttr(m.title)}>${esc(m.title)}</dd>`)
-  rows.push(`<dt>kind</dt><dd>${esc(m.kind)}</dd>`)
+  rows.push(`<dt>Title</dt><dd${dirAttr(m.title)}>${esc(m.title)}</dd>`)
+  rows.push(`<dt>Kind</dt><dd>${m.kind === 'gltf' ? 'glTF model' : 'Procedural massing'}</dd>`)
   if (m.file) {
-    rows.push(`<dt>sha-256</dt><dd class="hash">${esc(m.file.sha256)}</dd>`)
+    rows.push(`<dt>SHA-256</dt><dd class="hash">${esc(m.file.sha256)}</dd>`)
   } else {
-    rows.push(`<dt>scene</dt><dd>procedural massing</dd>`)
+    rows.push(`<dt>Scene</dt><dd>Procedural massing</dd>`)
   }
-  rows.push(`<dt>anchored</dt><dd>${anchored} statement${anchored === 1 ? '' : 's'}</dd>`)
+  rows.push(`<dt>Anchored</dt><dd>${anchored} statement${anchored === 1 ? '' : 's'}</dd>`)
   return `<section class="block">
     <h2 class="block-label">Model</h2>
     <dl class="meta">${rows.join('')}</dl>
@@ -239,14 +246,14 @@ function buildRecording(pub: PublicProject): string {
   const r = pub.testimony.recording
   if (!r) return ''
   const rows: string[] = []
-  rows.push(`<dt>medium</dt><dd>${esc(r.medium)}</dd>`)
-  rows.push(`<dt>title</dt><dd${dirAttr(r.title)}>${esc(r.title)}</dd>`)
-  if (r.durationSec) rows.push(`<dt>length</dt><dd>${esc(fmtClock(r.durationSec))}</dd>`)
-  if (r.recordedOn) rows.push(`<dt>recorded</dt><dd>${esc(formatDateTime(r.recordedOn.value, r.recordedOn.precision))}</dd>`)
-  if (r.file) rows.push(`<dt>sha-256</dt><dd class="hash">${esc(r.file.sha256)}</dd>`)
+  rows.push(`<dt>Medium</dt><dd>${esc(cap(r.medium.replace(/-/g, ' ')))}</dd>`)
+  rows.push(`<dt>Title</dt><dd${dirAttr(r.title)}>${esc(r.title)}</dd>`)
+  if (r.durationSec) rows.push(`<dt>Length</dt><dd class="mono">${esc(fmtClock(r.durationSec))}</dd>`)
+  if (r.recordedOn) rows.push(`<dt>Recorded</dt><dd class="mono">${esc(formatDateTime(r.recordedOn.value, r.recordedOn.precision))}</dd>`)
+  if (r.file) rows.push(`<dt>SHA-256</dt><dd class="hash">${esc(r.file.sha256)}</dd>`)
   if (r.link) {
-    rows.push(`<dt>link</dt><dd class="hash">${esc(r.link.url)}</dd>`)
-    if (r.link.archivedSha256) rows.push(`<dt>snapshot</dt><dd class="hash">sha256:${esc(r.link.archivedSha256)}</dd>`)
+    rows.push(`<dt>Link</dt><dd class="hash">${esc(r.link.url)}</dd>`)
+    if (r.link.archivedSha256) rows.push(`<dt>Snapshot</dt><dd class="hash">sha256:${esc(r.link.archivedSha256)}</dd>`)
   }
   return `<section class="block">
     <h2 class="block-label">Recording</h2>
@@ -311,19 +318,20 @@ export function buildPublishedHtml(pub: PublicProject): string {
 <style>${PUBLISHED_CSS}</style>
 </head>
 <body>
-<header class="head">
-  <div class="kicker">CONSENT-CLEARED TESTIMONY</div>
+<header class="head"><div class="head-inner">
+  <div class="kicker">A consent-cleared testimony</div>
   ${titlesHtml}
   <div class="head-meta">
-    <span class="tag">testimony of ${esc(SUBJECT_ARTICLE[t.subject] ?? t.subject)}</span>
+    <span class="tag">Testimony of ${esc(SUBJECT_ARTICLE[t.subject] ?? t.subject)}</span>
     <span class="mono">${esc(windowStr)}</span>
-    ${t.place?.name ? `<span class="mono">${esc(t.place.name)}</span>` : ''}
-    <span class="mono">${pub.statements.length} statements / ${t.narrators.length} narrators</span>
+    ${t.place?.name ? `<span>${esc(t.place.name)}</span>` : ''}
+    <span>${pub.statements.length} statement${pub.statements.length === 1 ? '' : 's'}, ${t.narrators.length} narrator${t.narrators.length === 1 ? '' : 's'}</span>
   </div>
-  ${t.rightsHolder ? `<div class="rights mono">Rights held by ${esc(t.rightsHolder)}</div>` : ''}
+  ${t.rightsHolder ? `<div class="rights">Rights held by ${esc(t.rightsHolder)}</div>` : ''}
   ${labelChips(t.labels)}
   ${t.summary ? `<p class="summary"${dirAttr(t.summary)}>${esc(t.summary)}</p>` : ''}
-</header>
+</div></header>
+<main class="page">
 
 ${buildNarrators(pub)}
 
@@ -334,9 +342,9 @@ ${
     ? `<section class="block">
   <h2 class="block-label">Ground anchors</h2>
   ${buildSvgMap(pub)}
-  <div class="legend mono">
-    <span><i class="sw sw-anchor"></i>statement anchor</span>
-    <span><i class="sw sw-place"></i>testimony place</span>
+  <div class="legend">
+    <span><i class="sw sw-anchor"></i>Statement anchor</span>
+    <span><i class="sw sw-place"></i>Testimony place</span>
   </div>
 </section>`
     : ''
@@ -356,8 +364,9 @@ ${buildChronology(pub)}
 
 <footer class="foot">
   <p class="disclaimer">${esc(DISCLAIMER)}</p>
-  <p class="mono">Produced with ${esc(APP_NAME)} (${esc(SUITE_NAME)}) by ${esc(AUTHOR.name)}, ${esc(AUTHOR.affiliation)}. ${generated ? 'Generated ' + generated + '.' : ''}</p>
+  <p>Produced with ${esc(APP_NAME)} (${esc(SUITE_NAME)}) by ${esc(AUTHOR.name)}, ${esc(AUTHOR.affiliation)}. ${generated ? 'Generated <span class="mono">' + generated + '</span>.' : ''}</p>
 </footer>
+</main>
 
 <script>
 (function(){
@@ -374,72 +383,70 @@ ${buildChronology(pub)}
 }
 
 const PUBLISHED_CSS = `
-:root{--bg:#07090c;--bg1:#0c0f14;--bg2:#11151c;--line:#1b212b;--line2:#27303c;--text:#e7ebf0;--t2:#a7b0bd;--t3:#6f7989;--signal:#f3a93c;--signalb:#ffc163;--subject:#7fa8bf;--alert:#e5544b;}
+@font-face{font-family:'Archivo';src:url(${archivo400}) format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Archivo';src:url(${archivo600}) format('woff2');font-weight:600 700;font-display:swap}
+:root{--violet:#5a1666;--mark:#c2185b;--ink:#1b1a18;--t2:#4a4842;--t3:#66635b;--line:#e1ded6;--line2:#cfccc3;--paper:#ffffff;--paper2:#f3f2ee;--alert:#b3261e;--subject:#5a1666}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Archivo',system-ui,sans-serif;line-height:1.55;padding:40px 24px 80px;max-width:1000px;margin:0 auto;font-size:14px}
-.mono,.hash,.chrono-time,.head-meta .mono{font-family:'Spline Sans Mono',ui-monospace,monospace}
+body{background:var(--paper);color:var(--ink);font-family:'Archivo','Helvetica Neue',Arial,sans-serif;line-height:1.55;font-size:15px}
+.page{max-width:1000px;margin:0 auto;padding:0 24px 80px}
+.mono,.hash,.chrono-time,.st-time,.head-meta .mono{font-family:'SF Mono',Menlo,Consolas,ui-monospace,monospace;font-size:.9em}
 [dir=rtl]{font-family:'Noto Naskh Arabic','Archivo',serif}
-.kicker{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.18em;color:var(--signal);margin-bottom:10px}
-.title{font-size:30px;line-height:1.15;font-weight:600;margin-bottom:4px}
-.title-alt{font-size:20px;font-weight:500;color:var(--t2);margin-bottom:4px}
-.head{border-bottom:1px solid var(--line2);padding-bottom:20px;margin-bottom:28px}
-.head-meta{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0;color:var(--t3);font-size:12px;align-items:center}
-.tag{border:1px solid var(--line2);border-radius:2px;padding:2px 8px;font-family:'Spline Sans Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--t2)}
-.rights{font-size:12px;color:var(--t2);margin-bottom:8px}
-.summary{color:var(--t2);max-width:74ch;margin-top:8px}
-.labels{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.lbl{font-family:'Spline Sans Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--signalb);border:1px solid var(--signal);border-radius:9px;padding:1px 8px}
-.block{margin:34px 0}
-.block-label{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:16px;font-weight:500}
-.narrators{list-style:none;display:flex;flex-direction:column;gap:6px}
-.narrators li{display:flex;gap:10px;align-items:baseline;font-size:14px;padding:5px 0;border-bottom:1px solid var(--line)}
+.head{border-bottom:1px solid var(--line2);background:var(--paper2);margin-bottom:28px;padding:32px 24px 24px}
+.head-inner{max-width:952px;margin:0 auto}
+.kicker{font-size:13px;color:var(--t3);margin-bottom:8px}
+.title{font-size:30px;line-height:1.15;font-weight:700;margin-bottom:6px}
+.title-alt{font-size:20px;font-weight:400;color:var(--t2);margin-bottom:4px}
+.head-meta{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0 0;color:var(--t2);font-size:14px;align-items:center}
+.tag{border:1px solid var(--line2);background:var(--paper);border-radius:3px;padding:0 7px;font-size:13px;color:var(--t2)}
+.rights{font-size:14px;color:var(--t2);margin-top:8px}
+.summary{color:var(--t2);max-width:74ch;margin-top:10px}
+.labels{margin-top:8px;font-size:14px;color:var(--t2)}
+.lbl{color:var(--ink);font-weight:600}
+.block{margin:36px 0}
+.block-label{font-size:18px;font-weight:700;color:var(--ink);border-bottom:1px solid var(--line2);padding-bottom:6px;margin-bottom:16px}
+.narrators{list-style:none}
+.narrators li{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--line)}
 .nar-name{font-weight:600}
-.nar-alias{font-family:'Spline Sans Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--signal);border:1px solid var(--signal);border-radius:9px;padding:0 6px}
-.nar-meta{color:var(--t3);font-size:12px}
-.transcript{display:flex;flex-direction:column;gap:2px}
-.st{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:12px 8px;border-radius:4px;border:1px solid transparent}
-.st.hi{border-color:var(--signal);background:var(--bg1)}
+.nar-alias{font-size:13px;color:var(--t3)}
+.nar-alias::before{content:'('}.nar-alias::after{content:')'}
+.nar-meta{color:var(--t2);font-size:14px}
+.transcript{display:flex;flex-direction:column}
+.st{display:grid;grid-template-columns:64px 1fr;gap:14px;padding:12px 8px 12px 0;border-bottom:1px solid var(--line)}
+.st.hi{background:var(--paper2);box-shadow:inset 3px 0 0 var(--violet)}
 .st-gutter{text-align:right}
-.st-time{font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--signal)}
-.st-meta{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:4px}
-.st-narrator{font-weight:600;font-size:13px}
-.st-cert{font-family:'Spline Sans Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--t3)}
-.st-refers{font-family:'Spline Sans Mono',monospace;font-size:10px;color:var(--t3)}
-.st-text{font-size:15px;line-height:1.6;color:var(--text);max-width:72ch}
-.st-anchor{font-size:10px;color:var(--t3);margin-top:6px}
-.sitemap{width:100%;height:auto;background:var(--bg1);border:1px solid var(--line2);border-radius:4px}
+.st-time{color:var(--t2)}
+.st-meta{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:4px;font-size:13px;color:var(--t3)}
+.st-narrator{font-weight:600;font-size:14px;color:var(--ink)}
+.st-cert{color:var(--t2)}
+.st-text{font-size:16px;line-height:1.6;color:var(--ink);max-width:72ch}
+.st-anchor{font-size:13px;color:var(--t3);margin-top:6px;font-family:inherit}
+.sitemap{width:100%;height:auto;background:var(--paper2);border:1px solid var(--line2);border-radius:4px}
 .m-frame{fill:none;stroke:var(--line2)}
 .m-grid{stroke:var(--line);stroke-width:1}
-.marker{stroke:#0a0c10;stroke-width:1.5}
+.marker{stroke:#fff;stroke-width:1.5}
 .m-anchor{fill:var(--subject)}
 .m-place{fill:none;stroke:var(--t2);stroke-width:1.5}
-.marker.hi{stroke:var(--signalb);stroke-width:2.5;fill:var(--signalb)}
-.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;color:var(--t3);font-size:11px}
-.legend i{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:middle;border-radius:50%}
+.marker.hi{fill:var(--mark);stroke:#fff;stroke-width:2}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;color:var(--t2);font-size:13px}
+.legend i{display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:middle;border-radius:50%}
 .sw-anchor{background:var(--subject)}.sw-place{background:transparent;border:1.5px solid var(--t2)}
-.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;max-width:72ch}
-.meta dt{font-family:'Spline Sans Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);padding-top:2px}
-.hash{font-family:'Spline Sans Mono',monospace;font-size:10px;color:var(--t3);word-break:break-all}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14px;max-width:72ch}
+.meta dt{color:var(--t3)}
+.hash{font-size:12px;color:var(--t2);word-break:break-all}
 .chrono{list-style:none}
-.chrono li{display:flex;gap:14px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)}
-.chrono-time{color:var(--signal);min-width:170px;font-size:12px}
+.chrono li{display:flex;gap:16px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)}
+.chrono-time{color:var(--ink);min-width:170px}
 .chrono-label{flex:1}
-.disclosure{background:var(--bg1);border:1px solid var(--line2);border-radius:4px;padding:16px}
-.redactions{margin-top:8px;padding-left:18px;color:var(--t2);font-size:13px}
-.muted{color:var(--t3);margin-top:10px;font-size:13px}
-.foot{margin-top:48px;border-top:1px solid var(--line2);padding-top:18px;color:var(--t3);font-size:12px}
+.disclosure{background:var(--paper2);border:1px solid var(--line2);border-left:3px solid var(--violet);padding:14px 16px}
+.redactions{margin-top:8px;padding-left:18px;color:var(--t2);font-size:14px}
+.muted{color:var(--t3);margin-top:10px;font-size:14px}
+.foot{margin-top:52px;border-top:1px solid var(--line2);padding-top:16px;color:var(--t3);font-size:13px}
 .disclaimer{color:var(--t2);margin-bottom:8px;max-width:74ch}
+a{color:inherit;text-decoration-color:var(--line2);text-underline-offset:3px}
+a:hover{color:var(--violet);text-decoration-color:currentColor}
 @media print{
-  body{background:#fff;color:#111;max-width:none;padding:0}
-  .kicker{color:#7a5300}.title-alt,.summary,.disclaimer,.muted,.st-text{color:#222}
-  .sitemap{background:#fff;border-color:#bbb}.m-grid{stroke:#eee}.m-frame{stroke:#ccc}
-  .m-anchor{fill:#3a6e8c}.m-place{stroke:#555}
-  .st.hi{border-color:#ccc;background:#f6f6f6}
-  .disclosure{background:#fff;border-color:#ccc}
-  .block-label,.st-cert,.meta dt,.hash,.chrono-time{color:#555}
-  .st-time,.nar-alias{color:#7a5300}
-  .lbl{color:#7a5300;border-color:#caa24a}
-  .tag{color:#333;border-color:#bbb}
+  .head{background:none;padding:0 0 14px}
+  .st,.disclosure,.narrators li{break-inside:avoid}
   a,script{display:initial}
 }
 `

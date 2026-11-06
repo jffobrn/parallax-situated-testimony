@@ -126,9 +126,12 @@ export function Player() {
         className="player-play"
         onClick={togglePlay}
         disabled={disabled}
-        aria-label={playing ? 'pause' : 'play'}
+        aria-label={playing ? 'Pause' : 'Play'}
+        title={playing ? 'Pause' : 'Play'}
       >
-        {playing ? '❚❚' : '▶'}
+        <svg className="ic" viewBox="0 0 20 20" aria-hidden="true">
+          {playing ? <path d="M6 4.5h2.6v11H6zM11.4 4.5H14v11h-2.6z" /> : <path d="M6.5 4.2l9 5.8-9 5.8z" />}
+        </svg>
       </button>
 
       <span className="player-time mono">{fmtClock(playheadSec)}</span>
@@ -142,18 +145,18 @@ export function Player() {
         value={Math.min(playheadSec, Math.max(duration, 0.1))}
         onChange={onScrub}
         disabled={disabled}
-        aria-label="seek recording"
+        aria-label="Seek in the recording"
       />
 
       <span className="player-time mono faint">{fmtClock(duration)}</span>
 
       <span className="player-now">
         {disabled ? (
-          <span className="faint">no recording or clips</span>
+          <span className="faint">No recording or clips yet.</span>
         ) : active ? (
-          <span className="signal" dir="auto">{statementSnippet(active, 56)}</span>
+          <span dir="auto">{statementSnippet(active, 90)}</span>
         ) : (
-          <span className="faint">{recording?.title ?? 'recording'}</span>
+          <span className="faint">{recording?.title ?? 'The recording'}</span>
         )}
       </span>
     </div>

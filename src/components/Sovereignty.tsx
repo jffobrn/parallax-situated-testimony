@@ -55,7 +55,7 @@ export function SovereigntyEditor({
       </Field>
 
       <span className="label">Labels</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         Labels a rights-holder has assigned. Shown labels appear as attribution;
         enforced labels withhold the item from anything published.
       </p>
@@ -80,9 +80,9 @@ export function SovereigntyEditor({
               <button
                 className="btn btn-sm btn-ghost"
                 onClick={() => removeLabel(key)}
-                aria-label="remove label"
+                aria-label="Remove this label"
               >
-                &times;
+                Remove
               </button>
             </div>
             <input
@@ -92,7 +92,7 @@ export function SovereigntyEditor({
               onChange={(e) => setLabel(key, { text: e.target.value })}
             />
             <span className={enforced ? 'sov-flag alert' : 'sov-flag faint'}>
-              {enforced ? 'enforced: withheld from the public build' : 'shown as attribution'}
+              {enforced ? 'Enforced: withheld from anything published.' : 'Shown as attribution.'}
             </span>
           </div>
         )

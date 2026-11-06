@@ -1,4 +1,6 @@
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { MAP_TOOLS_SLOT, ToolIcon } from '../panels/Toolbar'
 import * as maplibregl from 'maplibre-gl'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { Layer } from '@deck.gl/core'
@@ -7,6 +9,8 @@ import { useStore } from '../state/store'
 import { activeStatementId } from '../lib/derive'
 import type { Project } from '../core'
 import { buildMapLayers } from './layers'
+import { GRID_BG, groundFor, mapPalette } from './palette'
+import { resolvedTheme, useTheme } from '../state/theme'
 import {
   type BasemapOpts,
   type BasemapSource,
@@ -84,9 +88,13 @@ export function MapView() {
   const [releases, setReleases] = useState<WaybackRelease[]>([])
   const [measuring, setMeasuring] = useState(false)
   const [measurePts, setMeasurePts] = useState<LngLatTuple[]>([])
+  const theme = useTheme()
+  const ground = groundFor(basemap, theme)
+  const [toolSlot, setToolSlot] = useState<HTMLElement | null>(null)
+  useEffect(() => setToolSlot(document.getElementById(MAP_TOOLS_SLOT)), [])
 
-  const dataRef = useRef({ project, selectedStatementId, hoveredId, activeId })
-  dataRef.current = { project, selectedStatementId, hoveredId, activeId }
+  const dataRef = useRef({ project, selectedStatementId, hoveredId, activeId, ground })
+  dataRef.current = { project, selectedStatementId, hoveredId, activeId, ground }
   const measuringRef = useRef(false)
   const measurePtsRef = useRef<LngLatTuple[]>([])
   measuringRef.current = measuring
@@ -109,6 +117,7 @@ export function MapView() {
       hoveredId: d.hoveredId,
       activeId: d.activeId,
       graticule: graticuleLines(bounds),
+      ground: d.ground,
       onPickStatement: (id) => useStore.getState().selectStatement(id),
     })
     return [...layers, ...measureLayers()]
@@ -118,6 +127,7 @@ export function MapView() {
   const measureLayers = (): Layer[] => {
     const pts = measurePtsRef.current
     if (pts.length === 0) return []
+    const P = mapPalette(dataRef.current.ground)
     const out: Layer[] = []
     if (pts.length >= 3) {
       out.push(
@@ -125,7 +135,7 @@ export function MapView() {
           id: 'measure-fill',
           data: [pts],
           getPolygon: (d) => d as LngLatTuple[],
-          getFillColor: [243, 169, 60, 38],
+          getFillColor: P.measureFill,
           stroked: false,
           filled: true,
         }),
@@ -137,7 +147,7 @@ export function MapView() {
           id: 'measure-path',
           data: [pts],
           getPath: (d) => d as LngLatTuple[],
-          getColor: [243, 169, 60, 220],
+          getColor: P.measureLine,
           getWidth: 2,
           widthUnits: 'pixels',
         }),
@@ -148,11 +158,11 @@ export function MapView() {
         id: 'measure-pts',
         data: pts,
         getPosition: (d) => d as LngLatTuple,
-        getFillColor: [243, 169, 60, 255],
+        getFillColor: P.measurePt,
         getRadius: 4,
         radiusUnits: 'pixels',
         stroked: true,
-        getLineColor: [10, 12, 16, 255],
+        getLineColor: P.measurePtLine,
         lineWidthUnits: 'pixels',
         getLineWidth: 1,
       }),
@@ -179,7 +189,7 @@ export function MapView() {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: makeBasemapStyle(initial, { labels }),
+      style: makeBasemapStyle(initial, { labels, background: GRID_BG[resolvedTheme()] }),
       center,
       zoom: 16.2,
       attributionControl: false,
@@ -188,17 +198,14 @@ export function MapView() {
     })
     mapRef.current = map
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
+    map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 110 }), 'bottom-left')
     const attribution = new maplibregl.AttributionControl({ compact: true })
     map.addControl(attribution, 'bottom-right')
     attributionRef.current = attribution
 
     // Overlaid, not interleaved: deck.gl's interleaved path reads MapLibre
-
     // internals that MapLibre 6 removed. These maps are flat, so drawing deck
-
     // on its own canvas over the basemap loses nothing.
-
-
     const overlay = new MapboxOverlay({ interleaved: false, layers: [] })
     overlayRef.current = overlay
     map.addControl(overlay)
@@ -252,7 +259,7 @@ export function MapView() {
   // handler can apply its own new value before React state has flushed.
   const buildOpts = (over: { labels?: boolean; date?: string } = {}): BasemapOpts => {
     const date = over.date ?? waybackDate
-    const opts: BasemapOpts = { labels: over.labels ?? labels }
+    const opts: BasemapOpts = { labels: over.labels ?? labels, background: GRID_BG[theme] }
     if (fileKeyRef.current) opts.fileKey = fileKeyRef.current
     const r = releases.find((x) => x.date === date)
     if (date && r) opts.satelliteUrl = r.url
@@ -345,7 +352,18 @@ export function MapView() {
   useEffect(() => {
     rebuild()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project, selectedStatementId, hoveredId, activeId, measurePts])
+  }, [project, selectedStatementId, hoveredId, activeId, measurePts, ground])
+
+  // A theme change repaints the grid's background under the tiles.
+  const firstTheme = useRef(true)
+  useEffect(() => {
+    if (firstTheme.current) {
+      firstTheme.current = false
+      return
+    }
+    applyBasemap(basemap === 'file' ? 'file' : basemap, buildOpts())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme])
 
   // Fit the view to placed points shortly after they change, so a coordinate
   // typed into the inspector becomes visible without a reload.
@@ -393,16 +411,32 @@ export function MapView() {
   return (
     <>
       <div className="map-fill" ref={containerRef} />
-      <MapControls
-        basemap={basemap}
-        labels={labels}
-        waybackDate={waybackDate}
-        releases={releases}
-        onChoose={chooseBasemap}
-        onToggleLabels={toggleLabels}
-        onChooseWayback={chooseWayback}
-        onGoto={gotoPoint}
-      />
+      {toolSlot &&
+        createPortal(
+          <>
+            <MapControls
+              basemap={basemap}
+              labels={labels}
+              waybackDate={waybackDate}
+              releases={releases}
+              onChoose={chooseBasemap}
+              onToggleLabels={toggleLabels}
+              onChooseWayback={chooseWayback}
+            />
+            <button
+              className="tool"
+              aria-pressed={measuring || measurePts.length > 0}
+              onClick={() => (measuring || measurePts.length > 0 ? closeMeasure() : startMeasure())}
+              title="Measure distance and area"
+            >
+              <ToolIcon name="measure" />
+              Measure
+            </button>
+            <span className="tool-gap" />
+            <MapSearch onGoto={gotoPoint} />
+          </>,
+          toolSlot,
+        )}
       <input
         ref={fileInputRef}
         type="file"
@@ -411,10 +445,11 @@ export function MapView() {
         onChange={onFilePicked}
       />
       <MapPlacementBanner />
-      <div className="map-legend mono">
-        <div className="legend-row"><span className="sw sw-subject" /> statement anchor</div>
-        <div className="legend-row"><span className="sw sw-place" /> testimony place</div>
-        <div className="legend-row"><span className="sw sw-unsafe" /> protected</div>
+      <div className="map-legend" aria-label="Map key">
+        <div className="legend-row"><span className="sw sw-anchor" /> Statement anchor</div>
+        <div className="legend-row"><span className="sw sw-sel" /> In focus</div>
+        <div className="legend-row"><span className="sw sw-place" /> Testimony place</div>
+        <div className="legend-row"><span className="sw sw-unsafe" /> Protected</div>
       </div>
       <MeasureControl
         measuring={measuring}
@@ -446,27 +481,21 @@ function MeasureControl({
   onDone: () => void
   onClose: () => void
 }) {
-  if (!measuring && pts.length === 0) {
-    return (
-      <button className="measure-start mono" onClick={onStart} title="Measure distance and area">
-        Measure
-      </button>
-    )
-  }
+  if (!measuring && pts.length === 0) return null
   const dist = pts.length >= 2 ? fmtDistance(pathLengthM(pts)) : null
   const area = pts.length >= 3 ? fmtArea(polygonAreaM2(pts)) : null
   return (
-    <div className="measure-card mono">
+    <div className="measure-card">
       <div className="measure-readout">
         <span>
-          <b>{dist ?? '--'}</b> path
+          Path <b>{dist ?? 'none yet'}</b>
         </span>
         {area && (
           <span>
-            <b>{area}</b> area
+            Area <b>{area}</b>
           </span>
         )}
-        <span className="faint">{pts.length} pt{pts.length === 1 ? '' : 's'}</span>
+        <span className="faint">{pts.length} point{pts.length === 1 ? '' : 's'}</span>
       </div>
       {measuring && (
         <p className="measure-hint faint">
@@ -505,7 +534,6 @@ function MapControls({
   onChoose,
   onToggleLabels,
   onChooseWayback,
-  onGoto,
 }: {
   basemap: BasemapSource
   labels: boolean
@@ -514,46 +542,87 @@ function MapControls({
   onChoose: (s: BasemapSource) => void
   onToggleLabels: () => void
   onChooseWayback: (date: string) => void
-  onGoto: (lat: number, lng: number) => void
 }) {
   const opts: { id: BasemapSource; label: string; title: string }[] = [
-    { id: 'satellite', label: 'Satellite', title: 'Esri World Imagery (tokenless)' },
+    { id: 'satellite', label: 'Satellite', title: 'Esri World Imagery' },
     { id: 'streets', label: 'Streets', title: 'OpenStreetMap' },
-    { id: 'topo', label: 'Topo', title: 'Esri topographic, with hillshade' },
-    { id: 'graticule', label: 'Grid', title: 'Coordinate grid only; nothing is fetched' },
-    { id: 'file', label: 'File', title: 'Load a local .pmtiles basemap; nothing is fetched' },
+    { id: 'topo', label: 'Topo', title: 'Esri topographic' },
+    { id: 'graticule', label: 'Grid', title: 'Offline, nothing fetched' },
+    { id: 'file', label: 'File', title: 'A local .pmtiles, offline' },
   ]
+  const [open, setOpen] = useState(false)
+  const wrap = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+  const current = opts.find((o) => o.id === basemap)?.label ?? 'Ground'
+  const online = basemap === 'satellite' || basemap === 'streets' || basemap === 'topo'
   return (
-    <div className="basemap-picker mono">
-      <MapSearch onGoto={onGoto} />
-      <div className="basemap-row">
-        {opts.map((o) => (
-          <button
-            key={o.id}
-            className="basemap-btn"
-            data-active={basemap === o.id}
-            title={o.title}
-            onClick={() => onChoose(o.id)}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
-      <label className="basemap-toggle">
-        <input type="checkbox" checked={labels} onChange={onToggleLabels} />
-        Labels
-      </label>
-      {basemap === 'satellite' && (
-        <div className="basemap-date">
-          <span>Imagery</span>
-          <select value={waybackDate} onChange={(e) => onChooseWayback(e.target.value)}>
-            <option value="">Live</option>
-            {releases.map((r) => (
-              <option key={r.date} value={r.date}>
-                {r.date}
-              </option>
-            ))}
-          </select>
+    <div className="menu-wrap" ref={wrap}>
+      <button
+        type="button"
+        className="tool"
+        aria-haspopup="true"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        title="Choose the map ground"
+      >
+        <ToolIcon name="ground" />
+        Ground: {current}
+        {basemap === 'satellite' && waybackDate ? <span className="mono">{waybackDate}</span> : null}
+      </button>
+      {open && (
+        <div className="menu menu-left ground-menu" role="group" aria-label="Map ground">
+          {opts.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={basemap === o.id}
+              className="menu-item"
+              onClick={() => onChoose(o.id)}
+            >
+              <span>{o.label}</span>
+              <span className="hint">{o.title}</span>
+            </button>
+          ))}
+          <div className="menu-sep" />
+          <label className="menu-item" style={{ justifyContent: 'flex-start', gap: 10, opacity: online ? 1 : 0.5 }}>
+            <input type="checkbox" checked={labels} onChange={onToggleLabels} disabled={!online} />
+            Place labels
+            {!online && <span className="hint">online grounds only</span>}
+          </label>
+          {basemap === 'satellite' && (
+            <label className="menu-item" style={{ justifyContent: 'flex-start', gap: 10 }}>
+              Imagery date
+              <select
+                className="input"
+                style={{ width: 'auto', padding: '4px 8px' }}
+                value={waybackDate}
+                onChange={(e) => onChooseWayback(e.target.value)}
+                aria-label="Imagery date"
+              >
+                <option value="">Live</option>
+                {releases.map((r) => (
+                  <option key={r.date} value={r.date}>
+                    {r.date}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       )}
     </div>
@@ -595,7 +664,7 @@ function MapSearch({ onGoto }: { onGoto: (lat: number, lng: number) => void }) {
     <div className="map-search">
       <input
         className="map-search-input"
-        placeholder="Search place or lat, lng"
+        placeholder="Find a place or coordinates"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => {
@@ -605,9 +674,9 @@ function MapSearch({ onGoto }: { onGoto: (lat: number, lng: number) => void }) {
       />
       {results !== null && (
         <div className="map-results">
-          {busy && <div className="map-search-msg">searching…</div>}
+          {busy && <div className="map-search-msg">Searching…</div>}
           {!busy && results.length === 0 && (
-            <div className="map-search-msg">no match</div>
+            <div className="map-search-msg">No match.</div>
           )}
           {results.map((r, i) => (
             <button key={i} className="map-result" title={r.label} onClick={() => pick(r)}>

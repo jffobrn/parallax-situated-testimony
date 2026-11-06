@@ -4,6 +4,49 @@ All notable changes to Situated Testimony are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses semantic
 versioning.
 
+## [1.4.0] - 2026-11-05
+
+### Changed
+
+- A new interface, Workbench, laid out like working software: a title bar
+  with Case, View, and Help menus and Publish as the one primary action; a tool
+  bar with the stage switch (Transcript, Model, Map) and the actual tools
+  (Select, Anchor in model, Anchor on map, Place testimony), to which the Model
+  view adds Capture viewpoint and the Map view adds Ground, Measure, and the
+  place search; the testimony as an outline of compact tables (narrators with
+  role, identity, and statement count; statements with narrator, clip, and
+  consent); a Properties pane laid out as a grid of labelled fields; a dock with
+  the recording transport above the Chronology; and a status bar with the
+  cursor or playhead, the counts, how many narrators publish under an alias,
+  and how many statements are withheld from publication.
+- Neutral warm greys, Archivo at 13 px, and IBM Plex Mono only for data, both
+  vendored so nothing is fetched; the two font packages they replace are
+  removed. Violet marks the selection; raspberry marks the statement in focus;
+  red is kept for protection.
+- A dark mode in the same register, following the system; View, then
+  Appearance, fixes Light or Dark for this browser. The 3D scene, the map's
+  marks, and the chronology take their colours from the theme.
+- Plain language in place of apparatus: no numbered section codes, tracked
+  capitals, status pills, or glyph markers. Consent, certainty, and anchors
+  read as words; a restricted, embargoed, or label-withheld statement, and a
+  narrator whose identity is protected, read in red with a red rule on the row;
+  consent in the editors (a statement, a narrator's identity, the model) is a
+  choice with each level's meaning beside it.
+- New and Reset moved into the Case menu and confirm in a dialog; importing a
+  transcript moved into the outline's Add menu.
+- The statement filters (publication, narrator, tags) sit above the statement
+  table; the narrator filter is a menu in place of a button on each row.
+- Map marks change colour with the ground, light over imagery and violet over
+  the light grounds, and the map has a key and a scale bar.
+- On a narrow screen the panes stack, stage first.
+- The published artifact is set as a plain working paper in the same register,
+  with Archivo embedded so the file stays self-contained.
+
+### Fixed
+
+- The narrator choice in the statement editor shows Unassigned rather than a
+  blank field, and placing the testimony from its editor switches to the map.
+
 ## [1.3.2] - 2026-11-05
 
 ### Security

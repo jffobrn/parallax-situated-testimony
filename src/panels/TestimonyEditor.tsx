@@ -13,7 +13,7 @@ import { findWaybackSnapshot } from '../lib/wayback'
 import { PointFields } from '../components/points'
 import { SovereigntyEditor } from '../components/Sovereignty'
 import {
-  CONSENT_OPTIONS,
+  ConsentChoice,
   EnumSeg,
   Field,
   LocalizedTextEditor,
@@ -22,6 +22,12 @@ import {
   SelectMenu,
   SUBJECT_OPTIONS,
 } from '../components/ui'
+
+const MODEL_MEANING = {
+  public: 'Cited in the published testimony; model anchors are kept.',
+  restricted: 'Withheld from anything published; model anchors are stripped from published statements.',
+  embargoed: 'Withheld from anything published; model anchors are stripped from published statements.',
+} as const
 
 function fmtClock(sec: number | undefined): string {
   if (sec === undefined || !Number.isFinite(sec)) return '--:--'
@@ -39,7 +45,7 @@ export function TestimonyEditor() {
   return (
     <div className="panel-body" style={{ paddingTop: 12 }}>
       <span className="label">Titles</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         One per language. Direction is detected per string.
       </p>
       <LocalizedTextEditor
@@ -108,7 +114,7 @@ export function TestimonyEditor() {
 
       <div className="divider" />
       <span className="label">Place</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         Where the testimony is situated. Anchors the map.
       </p>
       <Field label="Name">
@@ -129,7 +135,10 @@ export function TestimonyEditor() {
         point={t.place}
         onChange={(p) => patch({ place: { ...p, name: t.place?.name } })}
         onRemove={() => patch({ place: undefined })}
-        onPlace={() => setPlacing({ kind: 'testimony-place' })}
+        onPlace={() => {
+          useStore.getState().setView('map')
+          setPlacing({ kind: 'testimony-place' })
+        }}
         placeLabel="Place on map"
         placingActive={placing?.kind === 'testimony-place'}
       />
@@ -142,7 +151,7 @@ export function TestimonyEditor() {
 
       <div className="divider" />
       <span className="label">Sovereignty</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         The umbrella rights-holder and labels for the whole testimony. Per-statement
         labels can narrow this further.
       </p>
@@ -227,7 +236,7 @@ function RecordingFields() {
       {recording?.file ? (
         <dl className="kv" style={{ marginTop: 4 }}>
           <dt>Name</dt>
-          <dd className="mono" style={{ fontSize: 11 }}>{recording.file.name}</dd>
+          <dd className="mono" style={{ fontSize: 13 }}>{recording.file.name}</dd>
           <dt>Size</dt>
           <dd className="mono">
             {formatBytes(recording.file.bytes)}
@@ -247,7 +256,7 @@ function RecordingFields() {
           </button>
         )}
       </div>
-      <p className="faint" style={{ fontSize: 11, marginTop: 6 }}>
+      <p className="faint" style={{ fontSize: 13, marginTop: 6 }}>
         Held locally and hashed. The voice is never embedded in a published build,
         only cited by hash.
       </p>
@@ -268,7 +277,7 @@ function RecordingFields() {
           <button className="btn btn-sm" onClick={requestSnapshot}>
             Request archived snapshot
           </button>
-          {wb && <p className="faint" style={{ fontSize: 11, marginTop: 6 }}>{wb}</p>}
+          {wb && <p className="faint" style={{ fontSize: 13, marginTop: 6 }}>{wb}</p>}
           {recording.link.archivedSha256 && (
             <dl className="kv" style={{ marginTop: 10 }}>
               <dt>Snapshot</dt>
@@ -305,7 +314,7 @@ function ModelFields() {
   return (
     <>
       <span className="label">Scene model</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         A glTF/glb the testimony is situated in. With none, a neutral procedural
         massing is shown. Statements anchor to points on it.
       </p>
@@ -328,14 +337,14 @@ function ModelFields() {
       {model?.file ? (
         <dl className="kv" style={{ marginTop: 4 }}>
           <dt>Name</dt>
-          <dd className="mono" style={{ fontSize: 11 }}>{model.file.name}</dd>
+          <dd className="mono" style={{ fontSize: 13 }}>{model.file.name}</dd>
           <dt>Size</dt>
           <dd className="mono">{formatBytes(model.file.bytes)}</dd>
           <dt>sha-256</dt>
           <dd className="hash">{model.file.sha256}</dd>
         </dl>
       ) : (
-        <p className="faint" style={{ fontSize: 11 }}>Procedural massing (no file loaded).</p>
+        <p className="faint" style={{ fontSize: 13 }}>Procedural massing (no file loaded).</p>
       )}
       <div className="btn-row" style={{ marginTop: 8 }}>
         <button className="btn btn-sm" onClick={() => fileInput.current?.click()}>
@@ -369,21 +378,14 @@ function ModelFields() {
       </Field>
 
       <div style={{ height: 10 }} />
-      <span className="label">Model consent</span>
+      <span className="label">Who may see the model</span>
       <div style={{ height: 6 }} />
-      <EnumSeg
+      <ConsentChoice
         value={model?.consent ?? 'public'}
-        options={CONSENT_OPTIONS}
         onChange={(v) => patch({ consent: v })}
+        meanings={MODEL_MEANING}
+        label="Who may see the model"
       />
-      <p
-        className={(model?.consent ?? 'public') === 'public' ? 'faint' : 'alert'}
-        style={{ fontSize: 11, marginTop: 6 }}
-      >
-        {(model?.consent ?? 'public') === 'public'
-          ? 'Cited in the published testimony; model anchors are kept.'
-          : 'Withheld from anything published; model anchors are stripped from published statements.'}
-      </p>
     </>
   )
 }

@@ -3,6 +3,7 @@ import { useStore } from './state/store'
 import { Toolbar } from './panels/Toolbar'
 import { Rail } from './panels/Rail'
 import { Inspector } from './panels/Inspector'
+import { StatusBar } from './panels/StatusBar'
 import { Transcript } from './transcript/Transcript'
 import { Player } from './player/Player'
 import { Timeline } from './timeline/Timeline'
@@ -24,21 +25,27 @@ function TimelineHead() {
   const extent = timeExtent(project)
 
   return (
-    <div className="timeline-head">
-      <span className="label"><span className="label-num">05</span>Chronology</span>
-      {extent && (
-        <span className="faint mono" style={{ fontSize: 11 }}>
-          {fmtMs(extent[0])} to {fmtMs(extent[1])}
-        </span>
-      )}
+    <div className="timeline-head" role="tablist" aria-label="dock view">
+      <button type="button" role="tab" className="dock-tab" aria-selected="true">
+        Chronology
+      </button>
       <div className="topbar-spacer" />
-      {timeBrush ? (
-        <button className="btn btn-sm btn-ghost" onClick={() => setTimeBrush(null)}>
-          Clear filter
-        </button>
-      ) : (
-        <span className="faint" style={{ fontSize: 11 }}>drag to filter</span>
-      )}
+      <span className="dock-info">
+        {extent ? (
+          <>
+            <span className="mono">{fmtMs(extent[0])}</span> to <span className="mono">{fmtMs(extent[1])}</span> UTC,{' '}
+            {timeBrush ? (
+              <button className="btn-link" onClick={() => setTimeBrush(null)}>
+                clear the filter
+              </button>
+            ) : (
+              'drag to filter'
+            )}
+          </>
+        ) : (
+          'The times the statements refer to'
+        )}
+      </span>
     </div>
   )
 }
@@ -49,7 +56,7 @@ function Stage() {
     <div className="stage-view">
       {view === 'transcript' && <Transcript />}
       {(view === 'model' || view === 'map') && (
-        <Suspense fallback={<div className="empty">Loading view...</div>}>
+        <Suspense fallback={<div className="empty">Loading the view...</div>}>
           {view === 'model' && <ModelView />}
           {view === 'map' && <MapView />}
         </Suspense>
@@ -69,7 +76,7 @@ export default function App() {
   if (!ready) {
     return (
       <div className="boot">
-        <div className="boot-mark mono">PARALLAX // SITUATED TESTIMONY</div>
+        <div className="boot-mark">Parallax Situated Testimony</div>
         <div className="faint">Loading local project...</div>
       </div>
     )
@@ -81,7 +88,7 @@ export default function App() {
       <div className="rail">
         <Rail />
       </div>
-      <div className="stage ticks">
+      <div className="stage">
         <Stage />
       </div>
       <div className="timeline-dock">
@@ -92,6 +99,7 @@ export default function App() {
       <div className="inspector">
         <Inspector />
       </div>
+      <StatusBar />
     </div>
   )
 }

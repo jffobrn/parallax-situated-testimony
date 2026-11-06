@@ -1,44 +1,75 @@
-import { useRef, useState } from 'react'
-import {
-  formatDateTimeShort,
-  hasRestrictingLabel,
-  type Narrator,
-  type Statement,
-} from '../core'
+import { useRef, useState, type ReactNode } from 'react'
+import { formatDateTimeShort, hasRestrictingLabel, type Narrator, type Statement } from '../core'
 import { useStore } from '../state/store'
 import { allTags, narratorOf, statementSnippet } from '../lib/derive'
 import { readFileText } from '../lib/download'
-import { ConsentBadge, Dir, RoleBadge, rowButton } from '../components/ui'
+import { ConsentBadge, Dir, Menu, SelectMenu, roleLabel, rowButton } from '../components/ui'
 
 type ConsentFilter = 'all' | 'public' | 'protected'
 
+/** The narrator filter's value for no filter (Radix Select needs a non-empty value). */
+const ALL = '__all'
+
+const SUBJECT_WORD: Record<string, string> = {
+  event: 'Testimony of an event',
+  place: 'Testimony of a place',
+  work: 'Testimony of a work',
+  life: 'Testimony of a life',
+  practice: 'Testimony of a practice',
+}
+
+function fmtClock(sec: number | undefined): string {
+  if (sec === undefined || !Number.isFinite(sec)) return ''
+  const s = Math.round(sec)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+/** A collapsible group in the case outline. */
+function Group({ title, count, children }: { title: string; count?: ReactNode; children: ReactNode }) {
+  const [open, setOpen] = useState(true)
+  return (
+    <section className="group">
+      <button type="button" className="group-head" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="twisty" aria-hidden="true" />
+        {title}
+        {count !== undefined && <span className="count">{count}</span>}
+      </button>
+      {open && children}
+    </section>
+  )
+}
+
+/** Whether a statement stays out of anything published. */
+function isWithheld(st: Statement): boolean {
+  return st.consent !== 'public' || hasRestrictingLabel(st.sovereignty)
+}
+
 /**
- * The rail: the testimony identity at the top, then the narrators, then the
- * statements faceted by consent, narrator, and tag. Selecting anything here
- * drives every other surface.
+ * The rail: the testimony as an outline. The testimony identity at the top,
+ * then the narrators, then the statements, filtered by consent, narrator, and
+ * tag. Selecting anything here drives every other surface.
  */
 export function Rail() {
   const project = useStore((s) => s.project)
   const selectedStatementId = useStore((s) => s.selectedStatementId)
   const selectedNarratorId = useStore((s) => s.selectedNarratorId)
   const hoveredId = useStore((s) => s.hoveredId)
+  const notify = useStore((s) => s.notify)
 
   const [consentFilter, setConsentFilter] = useState<ConsentFilter>('all')
-  const [narratorFilter, setNarratorFilter] = useState<string | null>(null)
+  const [narratorFilter, setNarratorFilter] = useState<string>('')
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
   const transcriptInput = useRef<HTMLInputElement | null>(null)
-  const [importMsg, setImportMsg] = useState<string | null>(null)
 
   const onTranscriptFile = async (file: File | undefined) => {
     if (!file) return
     try {
       const text = await readFileText(file)
       const n = useStore.getState().importTranscript(text)
-      setImportMsg(n > 0 ? `Imported ${n} statement${n === 1 ? '' : 's'}.` : 'No cues found in that file.')
+      notify(n > 0 ? `Imported ${n} statement${n === 1 ? '' : 's'}.` : 'No cues found in that file.')
     } catch {
-      setImportMsg('Could not read that transcript file.')
+      notify('Could not read that transcript file.')
     }
-    setTimeout(() => setImportMsg(null), 3500)
   }
 
   const t = project.testimony
@@ -54,170 +85,217 @@ export function Rail() {
     })
   }
 
+  const narratorKnown = !narratorFilter || t.narrators.some((n) => n.id === narratorFilter)
   const statements = project.statements.filter((st) => {
-    if (consentFilter === 'public' && st.consent !== 'public') return false
-    if (consentFilter === 'protected' && st.consent === 'public') return false
-    if (narratorFilter && st.narratorId !== narratorFilter) return false
+    if (consentFilter === 'public' && isWithheld(st)) return false
+    if (consentFilter === 'protected' && !isWithheld(st)) return false
+    if (narratorFilter && narratorKnown && st.narratorId !== narratorFilter) return false
     if (activeTags.size && !st.tags.some((x) => activeTags.has(x))) return false
     return true
   })
+  const filtered = statements.length !== project.statements.length
+
+  const narratorOptions = [
+    { value: ALL, label: 'All narrators' },
+    ...t.narrators.map((n) => ({ value: n.id, label: n.name?.trim() || 'Unnamed narrator' })),
+  ]
 
   return (
     <>
-      {/* Testimony identity / open the testimony editor */}
-      <button
-        className="atlas-card"
-        data-active={home}
-        onClick={() => {
-          useStore.getState().selectStatement(null)
-          useStore.getState().selectNarrator(null)
-        }}
-      >
-        <div className="between">
-          <span className="label"><span className="label-num">01</span>Testimony</span>
-          <span className="tag">{t.subject}</span>
-        </div>
-        <div className="atlas-titles">
-          {t.titles.map((tt, i) => (
-            <div key={i} className={i === 0 ? 'atlas-title' : 'atlas-title-alt'}>
-              <Dir text={tt.text || 'Untitled'} />
-            </div>
-          ))}
-        </div>
-        <div className="row-sub" style={{ padding: 0 }}>
-          {t.window.start ? formatDateTimeShort(t.window.start, t.window.precision) : 'no window'}
-          {t.window.end ? ` -> ${formatDateTimeShort(t.window.end, t.window.precision)}` : ''}
-        </div>
-      </button>
-
-      {/* Narrators */}
-      <div className="panel">
-        <div className="panel-head">
-          <span className="label"><span className="label-num">02</span>Narrators</span>
-          <span className="faint mono" style={{ fontSize: 11 }}>{t.narrators.length}</span>
-          <button className="btn btn-sm btn-ghost" onClick={() => useStore.getState().addNarrator()}>
-            + Narrator
-          </button>
-        </div>
-        <div className="list">
-          {t.narrators.length === 0 && <div className="empty">No narrators yet.</div>}
-          {t.narrators.map((n) => (
-            <NarratorRow
-              key={n.id}
-              narrator={n}
-              count={project.statements.filter((s) => s.narratorId === n.id).length}
-              selected={n.id === selectedNarratorId}
-              filtered={n.id === narratorFilter}
-              onFilter={() => setNarratorFilter((cur) => (cur === n.id ? null : n.id))}
-            />
-          ))}
-        </div>
+      <div className="pane-head">
+        <span>Testimony</span>
+        <Menu
+          label="Add"
+          entries={[
+            { label: 'Narrator', onSelect: () => useStore.getState().addNarrator() },
+            { label: 'Statement', onSelect: () => useStore.getState().addStatement() },
+            {
+              label: 'Statements from a transcript',
+              hint: 'SRT, VTT, text',
+              onSelect: () => transcriptInput.current?.click(),
+            },
+          ]}
+        />
+        <input
+          ref={transcriptInput}
+          type="file"
+          accept=".srt,.vtt,.txt,text/plain,text/vtt,application/x-subrip"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            void onTranscriptFile(e.target.files?.[0])
+            e.target.value = ''
+          }}
+        />
       </div>
 
-      {/* Statements */}
-      <div className="panel">
-        <div className="panel-head">
-          <span className="label"><span className="label-num">03</span>Statements</span>
-          <span className="faint mono" style={{ fontSize: 11 }}>{statements.length}/{project.statements.length}</span>
-          <button
-            className="btn btn-sm btn-ghost"
-            onClick={() => transcriptInput.current?.click()}
-            title="Import an SRT, VTT, or plain-text transcript as statements"
-          >
-            Import
-          </button>
-          <button className="btn btn-sm btn-ghost" onClick={() => useStore.getState().addStatement()}>
-            + Statement
-          </button>
-          <input
-            ref={transcriptInput}
-            type="file"
-            accept=".srt,.vtt,.txt,text/plain,text/vtt,application/x-subrip"
-            style={{ display: 'none' }}
-            onChange={(e) => onTranscriptFile(e.target.files?.[0])}
-          />
-        </div>
-        {importMsg && (
-          <p className="faint" style={{ fontSize: 11, padding: '0 var(--s3) 6px' }}>
-            {importMsg}
-          </p>
-        )}
-
-        <div className="facet-row">
-          {(['all', 'public', 'protected'] as ConsentFilter[]).map((c) => (
-            <button key={c} className="facet" data-on={consentFilter === c} onClick={() => setConsentFilter(c)}>
-              {c}
-            </button>
-          ))}
-        </div>
-        {tags.length > 0 && (
-          <div className="facet-row">
-            {tags.map((tag) => (
-              <button key={tag} className="facet" data-on={activeTags.has(tag)} onClick={() => toggleTag(tag)}>
-                {tag}
-              </button>
+      <Group title="Account">
+        <button
+          className="testimony-card"
+          data-active={home}
+          onClick={() => {
+            useStore.getState().selectStatement(null)
+            useStore.getState().selectNarrator(null)
+          }}
+        >
+          <div className="testimony-titles">
+            {t.titles.map((tt, i) => (
+              <div key={i} className={i === 0 ? 'testimony-title' : 'testimony-title-alt'}>
+                <Dir text={tt.text || 'Untitled'} />
+              </div>
             ))}
+          </div>
+          <div className="row-sub wrap">
+            {SUBJECT_WORD[t.subject] ?? 'Testimony'},{' '}
+            {t.window.start
+              ? `${formatDateTimeShort(t.window.start, t.window.precision)}${
+                  t.window.end ? ` to ${formatDateTimeShort(t.window.end, t.window.precision)}` : ''
+                }`
+              : 'no time window yet'}
+          </div>
+        </button>
+      </Group>
+
+      <Group title="Narrators" count={t.narrators.length}>
+        {t.narrators.length === 0 ? (
+          <div className="empty">No narrators yet. Add one from the Add menu.</div>
+        ) : (
+          <table className="outline">
+            <colgroup>
+              <col />
+              <col className="c-role" />
+              <col className="c-consent" />
+              <col className="c-said" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Identity</th>
+                <th>Statements</th>
+              </tr>
+            </thead>
+            <tbody>
+              {t.narrators.map((n) => (
+                <NarratorRow
+                  key={n.id}
+                  narrator={n}
+                  count={project.statements.filter((s) => s.narratorId === n.id).length}
+                  selected={n.id === selectedNarratorId}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Group>
+
+      <Group
+        title="Statements"
+        count={filtered ? `${statements.length} of ${project.statements.length}` : project.statements.length}
+      >
+        {project.statements.length > 0 && (
+          <div className="rail-filters">
+            <div className="seg" role="group" aria-label="Filter by publication">
+              {(
+                [
+                  ['all', 'All'],
+                  ['public', 'Public'],
+                  ['protected', 'Withheld'],
+                ] as [ConsentFilter, string][]
+              ).map(([c, label]) => (
+                <button key={c} type="button" aria-pressed={consentFilter === c} onClick={() => setConsentFilter(c)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {t.narrators.length > 1 && (
+              <div className="rail-filter-select">
+                <SelectMenu
+                  value={narratorKnown && narratorFilter ? narratorFilter : ALL}
+                  options={narratorOptions}
+                  onChange={(v) => setNarratorFilter(v === ALL ? '' : v)}
+                  ariaLabel="Filter by narrator"
+                />
+              </div>
+            )}
+            {tags.length > 0 && (
+              <div className="tag-filters" role="group" aria-label="Filter by tag">
+                {tags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    className="facet"
+                    aria-pressed={activeTags.has(tag)}
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        <div className="list">
-          {statements.length === 0 && <div className="empty">No statements match.</div>}
-          {statements.map((st) => (
-            <StatementRow
-              key={st.id}
-              statement={st}
-              narrator={narratorOf(project, st)}
-              selected={st.id === selectedStatementId}
-              hovered={st.id === hoveredId && st.id !== selectedStatementId}
-            />
-          ))}
-        </div>
-      </div>
+        {project.statements.length === 0 ? (
+          <div className="empty">No statements yet. Add one, or import a transcript, from the Add menu.</div>
+        ) : statements.length === 0 ? (
+          <div className="empty">No statements match these filters.</div>
+        ) : (
+          <table className="outline">
+            <colgroup>
+              <col />
+              <col className="c-narrator" />
+              <col className="c-clip" />
+              <col className="c-consent" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Statement</th>
+                <th>Narrator</th>
+                <th>Clip</th>
+                <th>Consent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {statements.map((st) => (
+                <StatementRow
+                  key={st.id}
+                  statement={st}
+                  narrator={narratorOf(project, st)}
+                  selected={st.id === selectedStatementId}
+                  hovered={st.id === hoveredId && st.id !== selectedStatementId}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Group>
     </>
   )
 }
 
-function NarratorRow({
-  narrator,
-  count,
-  selected,
-  filtered,
-  onFilter,
-}: {
-  narrator: Narrator
-  count: number
-  selected: boolean
-  filtered: boolean
-  onFilter: () => void
-}) {
+function NarratorRow({ narrator, count, selected }: { narrator: Narrator; count: number; selected: boolean }) {
+  const name = narrator.name?.trim() || 'Unnamed narrator'
   return (
-    <div
+    <tr
       className="row"
       data-selected={selected}
+      data-withheld={narrator.identityConsent !== 'public'}
       {...rowButton(() => useStore.getState().selectNarrator(narrator.id))}
+      title={
+        narrator.identityConsent === 'public'
+          ? `${name}, ${roleLabel(narrator.role).toLowerCase()}`
+          : `${name}, ${roleLabel(narrator.role).toLowerCase()}; published under an alias`
+      }
     >
-      <div className="row-main">
-        <div className="row-title">
-          <Dir text={narrator.name?.trim() || 'Unnamed narrator'} />
-        </div>
-        <div className="row-sub">
-          <RoleBadge role={narrator.role} />
-          <ConsentBadge consent={narrator.identityConsent} />
-          <span>·{count}</span>
-        </div>
-      </div>
-      <button
-        className="facet"
-        data-on={filtered}
-        title="Filter statements to this narrator"
-        onClick={(e) => {
-          e.stopPropagation()
-          onFilter()
-        }}
-      >
-        filter
-      </button>
-    </div>
+      <td className="row-title">
+        <Dir text={name} />
+      </td>
+      <td>{roleLabel(narrator.role)}</td>
+      <td>
+        <ConsentBadge consent={narrator.identityConsent} />
+      </td>
+      <td className="mono">{count}</td>
+    </tr>
   )
 }
 
@@ -233,31 +311,36 @@ function StatementRow({
   hovered: boolean
 }) {
   const restricting = hasRestrictingLabel(statement.sovereignty)
+  const anchors = [statement.anchor?.model && 'in the model', statement.anchor?.geo && 'on the map'].filter(Boolean)
+  const when = statement.refersTo
+    ? `, refers to ${formatDateTimeShort(statement.refersTo.value, statement.refersTo.precision)}`
+    : ''
+  const title = `${statementSnippet(statement, 160)}${anchors.length ? `. Anchored ${anchors.join(' and ')}` : ''}${when}${
+    restricting ? '. A sovereignty label withholds it from publication.' : ''
+  }`
   return (
-    <div
+    <tr
       className="row"
       data-selected={selected}
       data-hovered={hovered}
+      data-withheld={isWithheld(statement)}
       {...rowButton(() => useStore.getState().selectStatement(statement.id))}
       onMouseEnter={() => useStore.getState().hover(statement.id)}
       onMouseLeave={() => useStore.getState().hover(null)}
+      title={title}
     >
-      <div className="row-main">
-        <div className="row-title" style={{ whiteSpace: 'normal' }}>
-          <Dir text={statementSnippet(statement, 96)} />
-        </div>
-        <div className="row-sub">
-          {narrator && <span className="faint">{narrator.name?.trim() || 'Unnamed'}</span>}
+      <td className="row-title">
+        <Dir text={statementSnippet(statement, 96)} />
+      </td>
+      <td className="row-title">{narrator ? narrator.name?.trim() || 'Unnamed' : <span className="faint">None</span>}</td>
+      <td className="mono">{fmtClock(statement.clip?.startSec)}</td>
+      <td>
+        {restricting && statement.consent === 'public' ? (
+          <span className="badge badge-restricted">Label</span>
+        ) : (
           <ConsentBadge consent={statement.consent} />
-          {statement.anchor?.model && <span title="anchored in the model">M</span>}
-          {statement.anchor?.geo && <span title="anchored on the map">G</span>}
-          {statement.clip && <span title="cued to the recording">▶</span>}
-          {restricting && <span className="alert" title="a sovereignty label withholds this from publication">⦸</span>}
-          {statement.refersTo && (
-            <span>{formatDateTimeShort(statement.refersTo.value, statement.refersTo.precision)}</span>
-          )}
-        </div>
-      </div>
-    </div>
+        )}
+      </td>
+    </tr>
   )
 }

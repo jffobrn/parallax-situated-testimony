@@ -9,24 +9,32 @@ import {
   timelineItems,
   type TimelineItem,
 } from '../lib/derive'
+import { token, useTheme } from '../state/theme'
 
-const PAL = {
-  axis: '#6f7989',
-  grid: '#1b212b',
-  window: 'rgba(127,168,191,0.07)',
-  windowLine: 'rgba(127,168,191,0.35)',
-  public: '#d8d2c0',
-  restricted: '#f3a93c',
-  embargoed: '#e5544b',
-  sel: '#ffc163',
-  brush: 'rgba(243,169,60,0.14)',
-  brushLine: 'rgba(243,169,60,0.6)',
+/** Timeline colours, read from the design tokens so both themes follow. */
+function readPal() {
+  return {
+    axis: token('--text-3'),
+    label: token('--text-2'),
+    halo: token('--surface'),
+    grid: token('--line-2'),
+    window: token('--signal-wash'),
+    windowLine: token('--signal-line'),
+    public: token('--primary'),
+    restricted: token('--alert'),
+    embargoed: token('--alert'),
+    sel: token('--mark'),
+    brush: token('--signal-wash'),
+    brushLine: token('--signal-line'),
+  }
 }
+type Pal = ReturnType<typeof readPal>
 
-const M = { top: 12, right: 18, bottom: 22, left: 18 }
-const MONO = "'Spline Sans Mono', ui-monospace, monospace"
+const M = { top: 12, right: 18, bottom: 24, left: 18 }
+const MONO = "'Plex Mono', ui-monospace, monospace"
+const SANS = "'Archivo', sans-serif"
 
-function itemColor(it: TimelineItem): string {
+function itemColor(it: TimelineItem, PAL: Pal): string {
   return it.consent === 'embargoed'
     ? PAL.embargoed
     : it.consent === 'restricted'
@@ -48,6 +56,9 @@ function fmtTick(d: Date, spanMs: number): string {
  * transcript, the model, and the map; dragging filters to a window.
  */
 export function Timeline() {
+  const theme = useTheme()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const PAL = useMemo(() => readPal(), [theme])
   const project = useStore((s) => s.project)
   const selectedStatementId = useStore((s) => s.selectedStatementId)
   const hoveredId = useStore((s) => s.hoveredId)
@@ -156,7 +167,6 @@ export function Timeline() {
               height={innerH}
               fill={PAL.window}
               stroke={PAL.windowLine}
-              strokeDasharray="2 3"
             />
           )}
 
@@ -172,17 +182,11 @@ export function Timeline() {
             style={{ cursor: 'crosshair' }}
           />
 
-          {/* Lane label sits at the top of the plot, clear of the marks (whose
-              dots sit on the lane and can cluster hard against the left edge). */}
-          <text x={0} y={8} fill={PAL.axis} fontSize={9} fontFamily={MONO} letterSpacing="1">
-            STATEMENTS
-          </text>
-
           {items.map((it) => {
             const x0 = x(it.start)
             const x1 = x(it.end)
             const w = Math.max(0, x1 - x0)
-            const col = itemColor(it)
+            const col = itemColor(it, PAL)
             const active = it.id === selectedStatementId || it.id === hoveredId || it.id === activeId
             const dim = !inBrush(it)
             const isPoint = w < 2
@@ -227,6 +231,22 @@ export function Timeline() {
             )
           })}
 
+          {/* The lane name sits at the top of the plot, clear of the marks, with a
+              halo so a mark never hides it. */}
+          <text
+            x={0}
+            y={10}
+            fill={PAL.label}
+            fontSize={12}
+            fontFamily={SANS}
+            stroke={PAL.halo}
+            strokeWidth={4}
+            paintOrder="stroke"
+            pointerEvents="none"
+          >
+            Statements
+          </text>
+
           {(() => {
             const band = dragNow ?? (timeBrush ? { a: x(timeBrush.start), b: x(timeBrush.end) } : null)
             if (!band) return null
@@ -252,7 +272,7 @@ export function Timeline() {
             tickFormat={(v) => fmtTick(v as Date, spanMs)}
             tickLabelProps={() => ({
               fill: PAL.axis,
-              fontSize: 9,
+              fontSize: 11,
               fontFamily: MONO,
               textAnchor: 'middle',
               dy: '0.2em',

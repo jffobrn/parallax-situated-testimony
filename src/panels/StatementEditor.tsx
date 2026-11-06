@@ -12,8 +12,7 @@ import { PointFields } from '../components/points'
 import { SovereigntyEditor } from '../components/Sovereignty'
 import {
   CERTAINTY_OPTIONS,
-  CONSENT_OPTIONS,
-  Dir,
+  ConsentChoice,
   EnumSeg,
   Field,
   LocalizedTextEditor,
@@ -21,14 +20,11 @@ import {
   SelectMenu,
 } from '../components/ui'
 
-const CONSENT_NOTE: Record<Statement['consent'], string> = {
-  public: 'Included in exports and the published testimony.',
-  restricted: 'Kept in your project file, withheld from anything published.',
-  embargoed: 'Kept in your project file, withheld from anything published.',
-}
+/** The narrator choice for none (Radix Select shows an empty value as blank). */
+const UNASSIGNED = '__none'
 
 function fmtClock(sec: number | undefined): string {
-  if (sec === undefined || !Number.isFinite(sec)) return '--:--'
+  if (sec === undefined || !Number.isFinite(sec)) return ''
   const s = Math.round(sec)
   const m = Math.floor(s / 60)
   return `${m}:${String(s % 60).padStart(2, '0')}`
@@ -63,7 +59,7 @@ export function StatementEditor({ statement }: { statement: Statement }) {
   }
 
   const narratorOptions = [
-    { value: '', label: 'Unassigned' },
+    { value: UNASSIGNED, label: 'Unassigned' },
     ...project.testimony.narrators.map((n) => ({
       value: n.id,
       label: n.name?.trim() || 'Unnamed narrator',
@@ -92,16 +88,16 @@ export function StatementEditor({ statement }: { statement: Statement }) {
 
       <Field label="Narrator">
         <SelectMenu
-          value={statement.narratorId ?? ''}
+          value={statement.narratorId ?? UNASSIGNED}
           options={narratorOptions}
-          onChange={(v) => patch({ narratorId: v || undefined })}
+          onChange={(v) => patch({ narratorId: v === UNASSIGNED ? undefined : v })}
           ariaLabel="narrator"
         />
       </Field>
 
       <div className="divider" />
       <span className="label">Words</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         The statement, one entry per language. Direction is detected per string.
       </p>
       <LocalizedTextEditor
@@ -114,11 +110,11 @@ export function StatementEditor({ statement }: { statement: Statement }) {
 
       <div className="divider" />
       <span className="label">Clip in the recording</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         Where in the recording this is spoken. Set from the transport playhead.
       </p>
       <div className="field-row">
-        <Field label={`Start  ${fmtClock(clip?.startSec)}`}>
+        <Field label="Start" hint={clip ? `${fmtClock(clip.startSec)} into the recording` : undefined}>
           <div className="clip-row">
             <input
               className="input input-mono"
@@ -134,14 +130,14 @@ export function StatementEditor({ statement }: { statement: Statement }) {
             />
             <button
               className="btn btn-sm btn-ghost"
-              title="set from playhead"
+              title="Set the start from the transport playhead"
               onClick={() => setClip({ startSec: Math.round(playheadSec * 10) / 10 })}
             >
-              ⤓
+              Use playhead
             </button>
           </div>
         </Field>
-        <Field label={`End  ${fmtClock(clip?.endSec)}`}>
+        <Field label="End" hint={clip?.endSec !== undefined ? `${fmtClock(clip.endSec)} into the recording` : undefined}>
           <div className="clip-row">
             <input
               className="input input-mono"
@@ -157,11 +153,11 @@ export function StatementEditor({ statement }: { statement: Statement }) {
             />
             <button
               className="btn btn-sm btn-ghost"
-              title="set from playhead"
+              title="Set the end from the transport playhead"
               disabled={!clip}
               onClick={() => setClip({ endSec: Math.round(playheadSec * 10) / 10 })}
             >
-              ⤓
+              Use playhead
             </button>
           </div>
         </Field>
@@ -169,7 +165,7 @@ export function StatementEditor({ statement }: { statement: Statement }) {
 
       <div className="divider" />
       <span className="label">Refers to</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         The real-world time the memory is about (not when it was recorded). Drives
         the chronology.
       </p>
@@ -194,7 +190,7 @@ export function StatementEditor({ statement }: { statement: Statement }) {
               onChange={(v) => patch({ refersTo: { value: statement.refersTo!.value, precision: v } })}
             />
           </Field>
-          <p className="faint" style={{ fontSize: 11, marginTop: -4 }}>
+          <p className="faint" style={{ fontSize: 13, marginTop: -4 }}>
             {formatDateTime(statement.refersTo.value, statement.refersTo.precision)}
           </p>
         </>
@@ -211,13 +207,13 @@ export function StatementEditor({ statement }: { statement: Statement }) {
 
       <div className="divider" />
       <span className="label">Anchor in the model</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         A point on the 3D scene where this memory attaches.
       </p>
       {statement.anchor?.model ? (
         <div className="between">
-          <span className="mono" style={{ fontSize: 11 }}>
-            x {statement.anchor.model.x.toFixed(2)} &nbsp; y {statement.anchor.model.y.toFixed(2)} &nbsp; z{' '}
+          <span className="mono">
+            x {statement.anchor.model.x.toFixed(2)}, y {statement.anchor.model.y.toFixed(2)}, z{' '}
             {statement.anchor.model.z.toFixed(2)}
           </span>
           <div className="btn-row">
@@ -254,7 +250,7 @@ export function StatementEditor({ statement }: { statement: Statement }) {
 
       <div className="divider" />
       <span className="label">3D viewpoint</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         A saved camera pose the selection flies to. Frame the shot in the model
         view, then capture.
       </p>
@@ -271,13 +267,13 @@ export function StatementEditor({ statement }: { statement: Statement }) {
           </button>
         )}
       </div>
-      <p className="faint" style={{ fontSize: 11, marginTop: 6 }}>
+      <p className="faint" style={{ fontSize: 13, marginTop: 6 }}>
         {vpMsg ?? (statement.viewpoint ? 'A viewpoint is saved.' : 'No viewpoint saved.')}
       </p>
 
       <div className="divider" />
       <span className="label">Anchor on the map</span>
-      <p className="faint" style={{ fontSize: 11, margin: '4px 0 8px' }}>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
         Where on the ground this memory attaches.
       </p>
       <PointFields
@@ -293,15 +289,9 @@ export function StatementEditor({ statement }: { statement: Statement }) {
       />
 
       <div className="divider" />
-      <span className="label">Consent</span>
+      <span className="label">Who may see this statement</span>
       <div style={{ height: 6 }} />
-      <EnumSeg value={statement.consent} options={CONSENT_OPTIONS} onChange={(v) => patch({ consent: v })} />
-      <p
-        className={statement.consent === 'public' ? 'faint' : 'alert'}
-        style={{ fontSize: 11, marginTop: 6 }}
-      >
-        {CONSENT_NOTE[statement.consent]}
-      </p>
+      <ConsentChoice value={statement.consent} onChange={(v) => patch({ consent: v })} />
 
       <div className="divider" />
       <span className="label">Sovereignty</span>
@@ -362,7 +352,7 @@ export function StatementEditor({ statement }: { statement: Statement }) {
       )}
       <div style={{ height: 8 }} />
       <div className="row-sub" style={{ padding: 0 }}>
-        <Dir text={statement.text[0]?.text || 'Untitled'} /> &nbsp;/&nbsp; id {id}
+        Statement id <span className="mono">{id}</span>
       </div>
     </div>
   )

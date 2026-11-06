@@ -9,18 +9,7 @@ import type { Layer } from '@deck.gl/core'
 import { PathLayer, ScatterplotLayer } from '@deck.gl/layers'
 import type { Project } from '../core'
 import type { Graticule } from './basemap'
-
-type RGBA = [number, number, number, number]
-
-const C = {
-  minor: [40, 48, 60, 110] as RGBA,
-  major: [56, 66, 79, 170] as RGBA,
-  subject: [127, 168, 191, 255] as RGBA,
-  subjectLine: [188, 214, 228, 255] as RGBA,
-  place: [167, 176, 189, 255] as RGBA,
-  alert: [229, 84, 75, 255] as RGBA,
-  sel: [255, 193, 99, 255] as RGBA,
-}
+import { mapPalette, type Ground } from './palette'
 
 export interface BuildLayersArgs {
   project: Project
@@ -28,6 +17,8 @@ export interface BuildLayersArgs {
   hoveredId: string | null
   activeId: string | null
   graticule: Graticule
+  /** Whether the ground under the marks is dark (imagery) or light. */
+  ground?: Ground
   onPickStatement?: (id: string) => void
 }
 
@@ -40,6 +31,7 @@ interface PointDatum {
 
 export function buildMapLayers(args: BuildLayersArgs): Layer[] {
   const { project, selectedStatementId, hoveredId, activeId, graticule } = args
+  const C = mapPalette(args.ground ?? 'dark')
   const isEmph = (id: string) => id === selectedStatementId || id === hoveredId || id === activeId
 
   const anchorPts: PointDatum[] = []
@@ -133,9 +125,9 @@ export function buildMapLayers(args: BuildLayersArgs): Layer[] {
       getRadius: (d: PointDatum) => (d.emphasized ? 7 : 5),
       radiusUnits: 'pixels',
       filled: true,
-      getFillColor: C.subject,
+      getFillColor: (d: PointDatum) => (d.emphasized ? C.sel : C.anchor),
       stroked: true,
-      getLineColor: (d: PointDatum) => (d.emphasized ? C.sel : C.subjectLine),
+      getLineColor: C.anchorLine,
       getLineWidth: (d: PointDatum) => (d.emphasized ? 2 : 1),
       lineWidthUnits: 'pixels',
       parameters: { depthTest: false },
@@ -146,7 +138,8 @@ export function buildMapLayers(args: BuildLayersArgs): Layer[] {
       },
       updateTriggers: {
         getRadius: [selectedStatementId, hoveredId, activeId],
-        getLineColor: [selectedStatementId, hoveredId, activeId],
+        getFillColor: [selectedStatementId, hoveredId, activeId, args.ground],
+        getLineColor: [args.ground],
         getLineWidth: [selectedStatementId, hoveredId, activeId],
       },
     }),

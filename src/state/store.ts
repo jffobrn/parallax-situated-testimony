@@ -55,6 +55,8 @@ export interface AppState {
   seekTargetSec: number
 
   timeBrush: { start: number; end: number } | null
+  /** A short status line for the status bar (save, import, reset outcomes). */
+  notice: string | null
   placing: Placing
   cursor: { lat: number; lng: number } | null
 
@@ -90,6 +92,7 @@ export interface AppState {
   setEditingStatement: (id: string | null) => void
   setView: (view: StageView) => void
   setTimeBrush: (range: { start: number; end: number } | null) => void
+  notify: (msg: string) => void
   setCursor: (c: { lat: number; lng: number } | null) => void
 
   // transport
@@ -159,6 +162,7 @@ export const useStore = create<AppState>()((set, get) => {
     seekTargetSec: 0,
 
     timeBrush: null,
+    notice: null,
     placing: null,
     cursor: null,
 
@@ -382,6 +386,12 @@ export const useStore = create<AppState>()((set, get) => {
     },
     setTimeBrush(range) {
       set({ timeBrush: range })
+    },
+    notify(msg) {
+      set({ notice: msg })
+      setTimeout(() => {
+        if (get().notice === msg) set({ notice: null })
+      }, 3500)
     },
     setCursor(c) {
       set({ cursor: c })
