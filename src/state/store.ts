@@ -7,6 +7,7 @@
  */
 
 import { create } from 'zustand'
+import { viewpointBridge } from '../model/viewpointBridge'
 import {
   blankSovereignty,
   clearProject,
@@ -310,6 +311,18 @@ export const useStore = create<AppState>()((set, get) => {
         consent: 'public',
         sovereignty: blankSovereignty(),
         tags: [],
+        review: { status: 'unreviewed' },
+      }
+      // A statement taken down with the model on screen is model-assisted, and
+      // the view it was given against is logged, so the model's part in the
+      // memory stays on the record.
+      if (get().view === 'model') {
+        const vp = viewpointBridge.capture()
+        statement.elicitation = {
+          mode: 'model-assisted',
+          viewpoint: vp ?? undefined,
+          loggedAt: vp ? new Date().toISOString() : undefined,
+        }
       }
       commit({ ...p, statements: [...p.statements, statement] })
       set({

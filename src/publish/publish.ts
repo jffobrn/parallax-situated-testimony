@@ -109,6 +109,54 @@ function anchorNote(st: PublicStatement): string {
   return parts.join(' and ')
 }
 
+const BASIS_PUB: Record<string, string> = {
+  perceived: 'perceived',
+  inferred: 'inferred',
+  hearsay: 'heard from others',
+}
+const KIND_PUB: Record<string, string> = {
+  correction: 'Correction',
+  negation: 'Negation',
+  addition: 'Addition',
+  withdrawal: 'Withdrawal',
+}
+const HOW_PUB: Record<string, string> = {
+  'read-back': 'read back',
+  'shown-model': 'shown with the model',
+  'in-writing': 'in writing',
+  other: 'reviewed',
+}
+
+/** How the statement was given, in words; the logged view is never published. */
+function givenLine(st: PublicProject['statements'][number]): string {
+  const e = st.elicitation
+  if (!e || e.mode === 'unrecorded') return ''
+  if (e.mode === 'free-recall') return 'Given in free recall'
+  if (e.mode === 'model-assisted') return 'Given with the model on screen'
+  return e.prompt ? `Prompted by ${e.prompt}` : 'Given in response to a prompt'
+}
+
+function reviewLine(st: PublicProject['statements'][number]): string {
+  const r = st.review
+  const verb = r.status === 'agreed' ? 'Agreed by the narrator' : 'Agreed by the narrator with changes'
+  const how = r.how ? `, ${HOW_PUB[r.how]}` : ''
+  return `${verb}${r.on ? ` on ${r.on}` : ''}${how}`
+}
+
+/** The correction log, published beside the statement it revises. */
+function correctionsHtml(st: PublicProject['statements'][number]): string {
+  if (!st.corrections.length) return ''
+  const items = st.corrections
+    .map(
+      (c) =>
+        `<li${c.supersededReason ? ' class="superseded"' : ''}><span class="cor-head">${esc(KIND_PUB[c.kind] ?? c.kind)}, ${esc(c.by)}, <span class="mono">${esc(c.at)}</span></span> <span class="cor-text"${dirAttr(c.text)}>${esc(c.text)}</span>${
+          c.supersededReason ? ` <span class="muted">(superseded: ${esc(c.supersededReason)})</span>` : ''
+        }</li>`,
+    )
+    .join('')
+  return `<ul class="corrections" aria-label="Correction log">${items}</ul>`
+}
+
 function buildTranscript(pub: PublicProject): string {
   if (pub.statements.length === 0) {
     return '<section class="block"><h2 class="block-label">Transcript</h2><p class="muted">No publishable statements.</p></section>'
@@ -126,11 +174,15 @@ function buildTranscript(pub: PublicProject): string {
         <div class="st-body">
           <div class="st-meta">
             ${name ? `<span class="st-narrator"${dirAttr(name)}>${esc(name)}</span>` : ''}
-            <span class="st-cert">${esc(cap(st.certainty))}</span>
+            <span class="st-cert">Held: ${esc(st.certainty)}</span>
+            ${st.basis ? `<span>${esc(cap(BASIS_PUB[st.basis]))}</span>` : ''}
+            ${givenLine(st) ? `<span>${esc(givenLine(st))}</span>` : ''}
+            <span>${esc(reviewLine(st))}</span>
             ${refers ? `<span class="st-refers">${esc(refers)}</span>` : ''}
           </div>
           <p class="st-text"${dirAttr(text)}>${esc(text)}</p>
           ${note ? `<div class="st-anchor mono">${esc(note)}</div>` : ''}
+          ${correctionsHtml(st)}
           ${labelChips(st.labels)}
         </div>
       </article>`
@@ -250,6 +302,9 @@ function buildRecording(pub: PublicProject): string {
   rows.push(`<dt>Title</dt><dd${dirAttr(r.title)}>${esc(r.title)}</dd>`)
   if (r.durationSec) rows.push(`<dt>Length</dt><dd class="mono">${esc(fmtClock(r.durationSec))}</dd>`)
   if (r.recordedOn) rows.push(`<dt>Recorded</dt><dd class="mono">${esc(formatDateTime(r.recordedOn.value, r.recordedOn.precision))}</dd>`)
+  if (r.interview?.interviewer) rows.push(`<dt>Interviewer</dt><dd>${esc(r.interview.interviewer.name ?? 'Named in the record, withheld here')}</dd>`)
+  if (r.interview?.interpreter) rows.push(`<dt>Interpreter</dt><dd>${esc(r.interview.interpreter.name ?? 'Named in the record, withheld here')}</dd>`)
+  if (r.interview?.languages) rows.push(`<dt>Languages</dt><dd>${esc(r.interview.languages)}</dd>`)
   if (r.file) rows.push(`<dt>SHA-256</dt><dd class="hash">${esc(r.file.sha256)}</dd>`)
   if (r.link) {
     rows.push(`<dt>Link</dt><dd class="hash">${esc(r.link.url)}</dd>`)
@@ -419,6 +474,10 @@ body{background:var(--paper);color:var(--ink);font-family:'Archivo','Helvetica N
 .st-narrator{font-weight:600;font-size:14px;color:var(--ink)}
 .st-cert{color:var(--t2)}
 .st-text{font-size:16px;line-height:1.6;color:var(--ink);max-width:72ch}
+.corrections{list-style:none;margin:8px 0 0;padding:0 0 0 12px;border-left:3px solid var(--line2);font-size:14px;color:var(--t2)}
+.corrections li{margin:4px 0}
+.corrections .cor-head{color:var(--t3);font-size:13px}
+.corrections .superseded .cor-text{text-decoration:line-through}
 .st-anchor{font-size:13px;color:var(--t3);margin-top:6px;font-family:inherit}
 .sitemap{width:100%;height:auto;background:var(--paper2);border:1px solid var(--line2);border-radius:4px}
 .m-frame{fill:none;stroke:var(--line2)}

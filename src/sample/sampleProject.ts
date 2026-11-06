@@ -128,6 +128,13 @@ export async function buildSampleProject(): Promise<Project> {
     file: recordingFile,
     durationSec: DURATION,
     recordedOn: { value: '2019-04-11T00:00:00Z', precision: 'day' },
+    interview: {
+      interviewer: { name: 'R. Khoury (invented)', identityConsent: 'public' },
+      // The interpreter asked not to be named: the role publishes, the name does not.
+      interpreter: { name: 'S. Nassar (invented)', identityConsent: 'restricted' },
+      languages: 'Arabic, interpreted into English',
+      setting: 'At the kitchen table of a house on the Quai des Marais, with a grandchild present (invented).',
+    },
     note: 'A short synthesised room tone stands in for the recording in this fictional sample.',
   }
 
@@ -152,6 +159,9 @@ export async function buildSampleProject(): Promise<Project> {
       clip: { startSec: 0, endSec: 16 },
       refersTo: { value: '1979-06-02T00:00:00Z', precision: 'day' },
       anchor: { model: { x: -4, y: 1.6, z: 4.4 } },
+      elicitation: { mode: 'free-recall' },
+      basis: 'perceived',
+      review: { status: 'agreed', on: '2019-05-02', how: 'read-back' },
       certainty: 'attested',
       consent: 'public',
       sovereignty: { rightsHolder: 'the residents of Vela (fictional)', labels: [{ code: 'attribution', text: 'Attribution' }] },
@@ -169,6 +179,22 @@ export async function buildSampleProject(): Promise<Project> {
       clip: { startSec: 16, endSec: 31 },
       refersTo: { value: '1979-08-01T00:00:00Z', precision: 'approximate' },
       anchor: { model: { x: -7, y: 5, z: -2.5 } },
+      elicitation: {
+        mode: 'model-assisted',
+        viewpoint: { pos: [-14, 7, 12], target: [-7, 4, -2.5] },
+        loggedAt: '2019-04-11T10:20:00Z',
+      },
+      basis: 'perceived',
+      corrections: [
+        {
+          id: 'cor-2a',
+          at: '2019-05-02',
+          by: 'narrator',
+          kind: 'negation',
+          text: 'Not the chandler on the corner: the one by the fish market. The corner shop came later.',
+        },
+      ],
+      review: { status: 'agreed-with-changes', on: '2019-05-02', how: 'shown-model' },
       certainty: 'probable',
       consent: 'public',
       sovereignty: blankSovereignty(),
@@ -186,6 +212,9 @@ export async function buildSampleProject(): Promise<Project> {
       clip: { startSec: 31, endSec: 48 },
       refersTo: { value: '1981-09-12T00:00:00Z', precision: 'day' },
       anchor: { geo: { lat: 34.4049, lng: -19.8499, safeToPublish: true } },
+      elicitation: { mode: 'prompted', prompt: 'the 1981 municipal survey' },
+      basis: 'inferred',
+      review: { status: 'agreed', on: '2019-04-30', how: 'in-writing' },
       certainty: 'attested',
       consent: 'public',
       sovereignty: blankSovereignty(),
@@ -207,6 +236,18 @@ export async function buildSampleProject(): Promise<Project> {
       clip: { startSec: 48, endSec: 64 },
       refersTo: { value: '1992-08-15T00:00:00Z', precision: 'day' },
       anchor: { model: { x: 5, y: 1.3, z: 4.4 }, geo: { ...WALL, safeToPublish: true } },
+      elicitation: { mode: 'free-recall' },
+      basis: 'perceived',
+      corrections: [
+        {
+          id: 'cor-4a',
+          at: '2019-05-02',
+          by: 'narrator',
+          kind: 'addition',
+          text: 'It was the second week of August. They painted the figure over last.',
+        },
+      ],
+      review: { status: 'agreed-with-changes', on: '2019-05-02', how: 'read-back' },
       certainty: 'attested',
       consent: 'public',
       sovereignty: blankSovereignty(),
@@ -225,6 +266,9 @@ export async function buildSampleProject(): Promise<Project> {
       refersTo: { value: '1994-05-01T00:00:00Z', precision: 'approximate' },
       // The courtyard's location is protected: the coordinate is withheld on publish.
       anchor: { geo: { lat: 34.4071, lng: -19.8466, safeToPublish: false } },
+      elicitation: { mode: 'free-recall' },
+      basis: 'perceived',
+      review: { status: 'agreed', on: '2019-05-02', how: 'read-back' },
       certainty: 'probable',
       consent: 'public',
       sovereignty: blankSovereignty(),
@@ -242,6 +286,9 @@ export async function buildSampleProject(): Promise<Project> {
       clip: { startSec: 78, endSec: 88 },
       refersTo: { value: '1980-01-01T00:00:00Z', precision: 'approximate' },
       anchor: { model: { x: 0, y: 0.2, z: 9 } },
+      elicitation: { mode: 'free-recall' },
+      basis: 'perceived',
+      review: { status: 'agreed', on: '2019-05-02', how: 'read-back' },
       certainty: 'probable',
       // Public consent, but a community-use label withholds it from the public build.
       consent: 'public',
@@ -263,12 +310,61 @@ export async function buildSampleProject(): Promise<Project> {
       clip: { startSec: 88, endSec: 96 },
       refersTo: { value: '1992-08-14T00:00:00Z', precision: 'day' },
       anchor: { model: { x: 6, y: 2.5, z: -2.5 } },
+      elicitation: { mode: 'free-recall' },
+      basis: 'perceived',
       certainty: 'uncertain',
       // Embargoed: kept in the project file, withheld from anything published.
       consent: 'embargoed',
       sovereignty: blankSovereignty(),
       note: 'Names a living individual; embargoed, so it never crosses the consent boundary.',
       tags: ['embargoed', 'erasure'],
+    },
+    {
+      id: 'st-8',
+      narratorId: 'nar-resident',
+      text: [
+        {
+          text: 'I think the painter left Vela the winter after, though I may be mixing him up with his brother.',
+          lang: 'en',
+        },
+      ],
+      refersTo: { value: '1980-01-01T00:00:00Z', precision: 'approximate' },
+      elicitation: { mode: 'free-recall' },
+      basis: 'hearsay',
+      corrections: [
+        {
+          id: 'cor-8a',
+          at: '2019-05-02',
+          by: 'narrator',
+          kind: 'withdrawal',
+          text: 'Leave this out. I am not sure it was him.',
+        },
+      ],
+      // Withdrawn by the narrator on review: it never publishes.
+      review: { status: 'withdrawn', on: '2019-05-02', how: 'read-back' },
+      certainty: 'uncertain',
+      consent: 'public',
+      sovereignty: blankSovereignty(),
+      tags: ['afterlife'],
+    },
+    {
+      id: 'st-9',
+      narratorId: 'nar-historian',
+      text: [
+        {
+          text: 'The scaffold stayed up for weeks after the opening; children climbed it at night.',
+          lang: 'en',
+        },
+      ],
+      refersTo: { value: '1979-07-01T00:00:00Z', precision: 'approximate' },
+      elicitation: { mode: 'unrecorded' },
+      basis: 'hearsay',
+      // Public, but the narrator has not yet reviewed it: held back.
+      review: { status: 'unreviewed' },
+      certainty: 'uncertain',
+      consent: 'public',
+      sovereignty: blankSovereignty(),
+      tags: ['making'],
     },
   ]
 

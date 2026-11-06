@@ -1,5 +1,6 @@
-import { formatLatLng, hasRestrictingLabel } from '../core'
+import { formatLatLng } from '../core'
 import { useStore } from '../state/store'
+import { publishState } from '../lib/review'
 import { recordingDuration } from '../lib/derive'
 import { Count } from '../components/ui'
 
@@ -23,7 +24,8 @@ export function StatusBar() {
   const notice = useStore((s) => s.notice)
 
   const statements = project.statements
-  const publicCount = statements.filter((s) => s.consent === 'public' && !hasRestrictingLabel(s.sovereignty)).length
+  const publicCount = statements.filter((s) => publishState(s).publishes).length
+  const unreviewed = statements.filter((s) => (s.review?.status ?? 'unreviewed') === 'unreviewed').length
   const withheld = statements.length - publicCount
   const aliased = project.testimony.narrators.filter((n) => n.identityConsent !== 'public').length
   const duration = recordingDuration(project)
@@ -49,12 +51,13 @@ export function StatusBar() {
       <span className="status-right">
         {notice && <span className="status-notice">{notice}</span>}
         <span>
-          <Count n={statements.length} noun="statement" />, <b>{publicCount}</b> public
+          <Count n={statements.length} noun="statement" />, <b>{publicCount}</b> publish
         </span>
         <span>
           <Count n={project.testimony.narrators.length} noun="narrator" />
           {aliased > 0 ? `, ${aliased} under an alias` : ''}
         </span>
+        {unreviewed > 0 && <span>{unreviewed} not yet reviewed</span>}
         {withheld > 0 && <span className="alert">{withheld} withheld from publication</span>}
       </span>
     </footer>

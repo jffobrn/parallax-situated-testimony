@@ -147,6 +147,9 @@ export function TestimonyEditor() {
       <RecordingFields />
 
       <div className="divider" />
+      <InterviewFields />
+
+      <div className="divider" />
       <ModelFields />
 
       <div className="divider" />
@@ -286,6 +289,75 @@ function RecordingFields() {
           )}
         </>
       )}
+    </>
+  )
+}
+
+const PERSON_CONSENT = [
+  { value: 'public', label: 'Named' },
+  { value: 'restricted', label: 'Role only' },
+] as const
+
+/** Who asked, who translated, and in what languages: the listener shapes the speech. */
+function InterviewFields() {
+  const recording = useStore((s) => s.project.testimony.recording)
+  const setRecording = useStore((s) => s.setRecording)
+  const iv = recording?.interview ?? {}
+  const patch = (partial: Partial<NonNullable<Recording['interview']>>) =>
+    setRecording({
+      ...(recording ?? { id: newId('rec'), medium: 'audio', title: 'Recording' }),
+      interview: { ...iv, ...partial },
+    })
+  const person = (key: 'interviewer' | 'interpreter', label: string) => {
+    const p = iv[key]
+    return (
+      <>
+        <Field label={label}>
+          <input
+            className="input"
+            value={p?.name ?? ''}
+            placeholder="Name"
+            onChange={(e) =>
+              patch({
+                [key]: e.target.value || p ? { identityConsent: p?.identityConsent ?? 'restricted', name: e.target.value || undefined } : undefined,
+              })
+            }
+          />
+        </Field>
+        {p?.name && (
+          <Field label="Published as">
+            <EnumSeg
+              value={p.identityConsent === 'public' ? 'public' : 'restricted'}
+              options={PERSON_CONSENT as unknown as { value: 'public' | 'restricted'; label: string }[]}
+              onChange={(v) => patch({ [key]: { ...p, identityConsent: v } })}
+            />
+          </Field>
+        )}
+      </>
+    )
+  }
+  return (
+    <>
+      <span className="label">Interview</span>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
+        The listener shapes the speech. Roles always publish; a name publishes only when marked Named.
+      </p>
+      {person('interviewer', 'Interviewer')}
+      {person('interpreter', 'Interpreter')}
+      <Field label="Languages" hint="For example: Arabic, interpreted into English. Published.">
+        <input
+          className="input"
+          value={iv.languages ?? ''}
+          onChange={(e) => patch({ languages: e.target.value || undefined })}
+        />
+      </Field>
+      <Field label="Setting" hint="Where and how the interview took place. Private; it can locate a witness, so it is never published.">
+        <textarea
+          className="textarea"
+          value={iv.setting ?? ''}
+          onChange={(e) => patch({ setting: e.target.value || undefined })}
+        />
+      </Field>
     </>
   )
 }

@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { formatDateTimeShort, hasRestrictingLabel, type Narrator, type Statement } from '../core'
 import { useStore } from '../state/store'
+import { publishState } from '../lib/review'
 import { allTags, narratorOf, statementSnippet } from '../lib/derive'
 import { readFileText } from '../lib/download'
 import { ConsentBadge, Dir, Menu, SelectMenu, roleLabel, rowButton } from '../components/ui'
@@ -41,7 +42,7 @@ function Group({ title, count, children }: { title: string; count?: ReactNode; c
 
 /** Whether a statement stays out of anything published. */
 function isWithheld(st: Statement): boolean {
-  return st.consent !== 'public' || hasRestrictingLabel(st.sovereignty)
+  return !publishState(st).publishes
 }
 
 /**
@@ -252,7 +253,7 @@ export function Rail() {
                 <th>Statement</th>
                 <th>Narrator</th>
                 <th>Clip</th>
-                <th>Consent</th>
+                <th>Publishes</th>
               </tr>
             </thead>
             <tbody>
@@ -335,11 +336,10 @@ function StatementRow({
       <td className="row-title">{narrator ? narrator.name?.trim() || 'Unnamed' : <span className="faint">None</span>}</td>
       <td className="mono">{fmtClock(statement.clip?.startSec)}</td>
       <td>
-        {restricting && statement.consent === 'public' ? (
-          <span className="badge badge-restricted">Label</span>
-        ) : (
-          <ConsentBadge consent={statement.consent} />
-        )}
+        {(() => {
+          const ps = publishState(statement)
+          return ps.publishes ? 'Yes' : <span className="badge badge-restricted">{ps.word}</span>
+        })()}
       </td>
     </tr>
   )

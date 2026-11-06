@@ -31,6 +31,11 @@ one click away when even that is unwanted.
   - [What a statement records](#what-a-statement-records)
   - [Anchoring a statement](#anchoring-a-statement)
   - [Consent and sovereignty on a statement](#consent-and-sovereignty-on-a-statement)
+- [The witness as author](#the-witness-as-author)
+  - [How a statement was given](#how-a-statement-was-given)
+  - [The correction log](#the-correction-log)
+  - [Narrator review](#narrator-review)
+  - [The interview](#the-interview)
 - [The recording transport](#the-recording-transport)
 - [The three views](#the-three-views)
 - [The map: basemap, search, and measure](#the-map-basemap-search-and-measure)
@@ -221,7 +226,8 @@ unanchored; reattributing, anchoring, and consent remain your work.
 
 - **Text.** In one or more languages, direction detected per string.
 - **Narrator.** Which voice this statement belongs to.
-- **Certainty.** Attested, probable, or uncertain.
+- **How it was given**, **what it rests on**, and **how firmly it is held** (see
+  [The witness as author](#the-witness-as-author)).
 - **Clip.** A start and end time in the recording; selecting the statement cues
   the recording here.
 - **Refers to.** The moment the statement is about, which places it on the
@@ -262,6 +268,76 @@ Each statement carries:
   community, not for open publication") withholds the statement from anything
   published, whatever its consent flag says. This is how a community's decision
   about a song or a name is enforced by the tool, not left to the editor's memory.
+
+---
+
+## The witness as author
+
+A testimony is the narrator's account, not the investigator's. Situated
+Testimony records the narrator's part in it: how each statement was given, how it
+was revised, and whether the narrator agreed to it before it was published. In
+Forensic Architecture's practice the witness directs the model and the
+distortions are kept as evidence (Weizman 2017, 44 to 47); a model can also
+prompt memory and wear away the witness's own standing (Kinstler 2022, 328 to
+330). Recording how each statement was given is what protects the testimony
+against the charge that the model put it there.
+
+### How a statement was given
+
+In the statement editor, under **How it was given**:
+
+- **Given**: **Free recall** (before the model or any image was shown), **With
+  the model** (the 3D model was on screen), **Prompted** (by a document or
+  image, which you name), or **Not recorded**.
+- When a statement is given **with the model**, the camera view on screen is
+  logged, with the time. A statement added while the Model view is open is
+  recorded this way automatically; **Log the view on screen** records it by hand.
+  The logged view stays in the project and is never published. It is separate
+  from the 3D viewpoint you save for the selection to fly to.
+- **Rests on**: **Perceived** (what the narrator saw or heard), **Inferred**
+  (what they worked out), or **Heard from others**. Observation and explanation
+  are different claims (Schuppli 2014, 62).
+- **Held**: how firmly the narrator holds the statement, attested, probable, or
+  uncertain. This is not a judgement of reliability: a gap or hesitation in a
+  traumatic memory is not unreliability, and belongs in the correction log.
+
+### The correction log
+
+Recall works by comparison and negation, "it was not there", "not like that"
+(Stuckey 2022, 6 to 7). The **Correction log** keeps each revision as the narrator
+or interviewer gives it: a **correction**, a **negation**, an **addition**, or a
+**withdrawal**, with who made it and when.
+
+The log is append-only. An entry can be marked **superseded**, with a reason, but
+it is never deleted; superseded entries read struck through. The log publishes
+beside the statement it revises, under that statement's own consent: the history
+of the account is part of the evidence.
+
+### Narrator review
+
+Before anything is published, the narrator reviews each statement: **Not yet
+reviewed**, **Agreed**, **Agreed with changes** (the changes are in the correction
+log), or **Withdrawn**, with the date and how the review was done (read back,
+shown with the model, in writing). Survivors who corrected the model were its
+co-authors (Smith and Watson 2023, 49 to 50).
+
+Only an agreed statement crosses the consent boundary. A statement not yet
+reviewed is held back, and a withdrawn one never publishes; the disclosure counts
+both. The statements table's **Publishes** column and the status bar say how many
+are not yet reviewed.
+
+Projects made before this release carry no review, so every statement in them
+reads as not yet reviewed and is held back until it is marked agreed.
+
+### The interview
+
+The listener shapes the speech (Abu Hamdan 2014, 73). In the testimony editor,
+under **Interview**, record the **interviewer**, the **interpreter**, and the
+**languages** spoken and translated. Their roles always publish; a name publishes
+only when it is marked **Named**, and otherwise the published file says the role
+was filled without naming the person. The **setting** (where and how the
+interview took place) can locate a witness, so it stays in the project and is
+never published.
 
 ---
 
@@ -355,6 +431,12 @@ whole testimony and:
 
 - drops statements that are not public, and drops public statements that carry a
   restricting sovereignty label;
+- holds back statements the narrator has not yet reviewed, and drops statements
+  the narrator withdrew;
+- publishes how each statement was given (without the logged camera view), what
+  it rests on, its review, and its correction log;
+- names the interviewer and interpreter only with consent, and never publishes
+  the interview's setting;
 - reduces a non-public narrator to a stable alias, and drops a narrator left with
   no surviving statement;
 - withholds the 3D model unless its consent is public, and withholds the anchors

@@ -7,6 +7,7 @@ import {
   statementText,
 } from '../lib/derive'
 import { CertaintyBadge, ConsentBadge, Dir, Meta } from '../components/ui'
+import { BASIS_WORD, REVIEW_WORD } from '../lib/review'
 
 function fmtClock(sec: number | undefined): string {
   if (sec === undefined || !Number.isFinite(sec)) return ''
@@ -111,6 +112,15 @@ function StatementBlock({
               parts={[
                 <ConsentBadge key="c" consent={statement.consent} />,
                 <CertaintyBadge key="k" certainty={statement.certainty} />,
+                statement.basis ? BASIS_WORD[statement.basis] : null,
+                (statement.review?.status ?? 'unreviewed') === 'agreed' ? null : (
+                  <span key="r" className={statement.review?.status === 'agreed-with-changes' ? undefined : 'alert'}>
+                    {REVIEW_WORD[statement.review?.status ?? 'unreviewed']}
+                  </span>
+                ),
+                statement.corrections?.length
+                  ? `${statement.corrections.length} correction${statement.corrections.length === 1 ? '' : 's'}`
+                  : null,
                 anchors.length ? `anchored ${anchors.join(' and ')}` : null,
                 restricting ? (
                   <span key="l" className="alert" title="A sovereignty label withholds this from publication">

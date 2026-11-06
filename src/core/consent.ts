@@ -101,6 +101,9 @@ export function publicClone(
     statementsDropped: 0,
     droppedByConsent: { restricted: 0, embargoed: 0 },
     droppedByLabel: 0,
+    droppedUnreviewed: 0,
+    droppedWithdrawn: 0,
+    interviewNamesWithheld: 0,
     narratorsAliased: 0,
     narratorsWithheld: 0,
     coordinatesWithheld: 0,
@@ -166,11 +169,24 @@ export function publicClone(
       redactions.droppedByLabel++
       continue
     }
-    statements.push(cleanStatement(st))
+    // The narrator signs off before anything goes public: a statement not yet
+    // reviewed is held back, and one withdrawn on review never publishes.
+    const status = st.review?.status ?? 'unreviewed'
+    if (status === 'withdrawn') {
+      redactions.statementsDropped++
+      redactions.droppedWithdrawn++
+      continue
+    }
+    if (status === 'unreviewed') {
+      redactions.statementsDropped++
+      redactions.droppedUnreviewed++
+      continue
+    }
+    statements.push(cleanStatement(st, status))
     if (st.narratorId) survivingNarratorIds.add(st.narratorId)
   }
 
-  function cleanStatement(st: Statement): PublicStatement {
+  function cleanStatement(st: Statement, status: 'agreed' | 'agreed-with-changes'): PublicStatement {
     let anchor: PublicAnchor | undefined
     const geo = cleanPoint(st.anchor?.geo)
     const modelAnchor = modelIsPublic ? st.anchor?.model : undefined
@@ -185,9 +201,23 @@ export function publicClone(
       refersTo: st.refersTo,
       anchor,
       certainty: st.certainty,
+      // The logged camera view is operator-only, like every viewpoint.
+      elicitation: st.elicitation
+        ? { mode: st.elicitation.mode, prompt: st.elicitation.prompt?.trim() || undefined }
+        : undefined,
+      basis: st.basis,
+      corrections: (st.corrections ?? []).map((c) => ({
+        at: c.at,
+        by: c.by,
+        kind: c.kind,
+        text: c.text,
+        supersededReason: c.supersededReason,
+      })),
+      review: { status, on: st.review?.on, how: st.review?.how },
       labels: shownLabels(st.sovereignty),
       tags: st.tags,
-      // Intentionally omitted: note (private), the consent flag, restricting labels.
+      // Intentionally omitted: note (private), the consent flag, restricting
+      // labels, the saved and logged viewpoints.
     }
   }
 
@@ -236,8 +266,25 @@ export function publicClone(
   if (testimony.recording) {
     const r = testimony.recording
     if (r.file) redactions.recordingMediaWithheld = true
+    const person = (p?: { name?: string; identityConsent: string }) => {
+      if (!p) return undefined
+      const named = p.name?.trim()
+      if (named && p.identityConsent !== 'public') redactions.interviewNamesWithheld++
+      return { name: p.identityConsent === 'public' ? named || undefined : undefined }
+    }
+    const iv = r.interview
+    // The interview's setting can locate a witness and is never published.
+    const interview =
+      iv && (iv.interviewer || iv.interpreter || iv.languages?.trim())
+        ? {
+            interviewer: person(iv.interviewer),
+            interpreter: person(iv.interpreter),
+            languages: iv.languages?.trim() || undefined,
+          }
+        : undefined
     recording = {
       medium: r.medium,
+      interview,
       title: r.title,
       durationSec: r.durationSec ?? r.file?.durationSec,
       recordedOn: r.recordedOn,
@@ -298,6 +345,10 @@ export function redactionLines(r: Redactions): string[] {
       parts.push(`${r.droppedByConsent.restricted} restricted`)
     if (r.droppedByLabel)
       parts.push(`${r.droppedByLabel} withheld by a sovereignty label`)
+    if (r.droppedUnreviewed)
+      parts.push(`${r.droppedUnreviewed} not yet reviewed by the narrator`)
+    if (r.droppedWithdrawn)
+      parts.push(`${r.droppedWithdrawn} withdrawn by the narrator`)
     const detail = parts.length ? ` (${parts.join(', ')})` : ''
     lines.push(
       `${r.statementsDropped} statement${r.statementsDropped === 1 ? '' : 's'} withheld${detail}`,
@@ -310,6 +361,10 @@ export function redactionLines(r: Redactions): string[] {
   if (r.narratorsWithheld > 0)
     lines.push(
       `${r.narratorsWithheld} narrator${r.narratorsWithheld === 1 ? '' : 's'} omitted for having no publishable statements`,
+    )
+  if (r.interviewNamesWithheld > 0)
+    lines.push(
+      `${r.interviewNamesWithheld} interviewer or interpreter name${r.interviewNamesWithheld === 1 ? '' : 's'} withheld; the role is kept`,
     )
   if (r.modelWithheld) lines.push('the 3D model was withheld; its anchors were removed')
   if (r.recordingMediaWithheld)

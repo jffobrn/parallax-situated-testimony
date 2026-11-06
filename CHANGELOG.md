@@ -4,6 +4,44 @@ All notable changes to Situated Testimony are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses semantic
 versioning.
 
+## [1.5.0] - 2026-11-06
+
+### Added
+
+- The witness as author. Each statement records how it was given (free recall,
+  with the model on screen, prompted by a named document or image, or not
+  recorded); a statement given with the model logs the camera view on screen,
+  automatically when it is added in the Model view. The logged view stays in
+  the project and is never published.
+- What a statement rests on: perceived, inferred, or heard from others.
+- An append-only correction log per statement: corrections, negations,
+  additions, and withdrawals, with who made them and when. Entries can be
+  superseded with a reason but never deleted, and the log publishes beside
+  the statement under its own consent.
+- Narrator review: not yet reviewed, agreed, agreed with changes, or
+  withdrawn, with the date and how the review was done. The statements table
+  gains a Publishes column, the transcript reads the review in words, and the
+  status bar counts statements not yet reviewed.
+- The interview: interviewer, interpreter, and languages. Roles always
+  publish; names only when marked Named. The setting stays private.
+
+### Changed
+
+- Certainty is reframed as how firmly the narrator holds a statement, with the
+  note that a gap or hesitation in a traumatic memory is not unreliability.
+- The project schema moves to version 2. Version 1 files open unchanged.
+
+### Security
+
+- Only statements the narrator has agreed to cross the consent boundary: a
+  statement not yet reviewed is held back and a withdrawn one never
+  publishes, and the disclosure counts both. Projects made before this release
+  carry no review, so their statements are held back until marked agreed.
+- Interviewer and interpreter names publish only with consent, the interview
+  setting never publishes, and the logged camera views never publish. The
+  smoke test probes for the sample's withdrawn and unreviewed statements, the
+  withheld interpreter, and the setting.
+
 ## [1.4.1] - 2026-11-06
 
 ### Fixed

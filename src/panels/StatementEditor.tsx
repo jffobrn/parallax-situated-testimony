@@ -2,7 +2,6 @@ import { useState } from 'react'
 import {
   formatDateTime,
   type Anchor,
-  type Certainty,
   type Statement,
   type TimePrecision,
 } from '../core'
@@ -10,8 +9,8 @@ import { useStore } from '../state/store'
 import { viewpointBridge } from '../model/viewpointBridge'
 import { PointFields } from '../components/points'
 import { SovereigntyEditor } from '../components/Sovereignty'
+import { CorrectionLog, HowGiven, Review } from './WitnessSections'
 import {
-  CERTAINTY_OPTIONS,
   ConsentChoice,
   EnumSeg,
   Field,
@@ -196,14 +195,9 @@ export function StatementEditor({ statement }: { statement: Statement }) {
         </>
       )}
 
-      <div className="divider" />
-      <Field label="Certainty" hint="How reliable the memory is held to be.">
-        <EnumSeg<Certainty>
-          value={statement.certainty}
-          options={CERTAINTY_OPTIONS}
-          onChange={(v) => patch({ certainty: v })}
-        />
-      </Field>
+      <HowGiven statement={statement} />
+      <Review statement={statement} />
+      <CorrectionLog statement={statement} />
 
       <div className="divider" />
       <span className="label">Anchor in the model</span>

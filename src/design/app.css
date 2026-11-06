@@ -731,3 +731,30 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Correction log --------------------------------------------------- */
+.correction {
+  border-left: 3px solid var(--line-strong);
+  padding: 4px 0 4px 10px;
+  margin-bottom: 8px;
+}
+.correction-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--t-sm);
+  color: var(--text-2);
+}
+.correction-text {
+  margin-top: 2px;
+}
+.correction[data-superseded='true'] .correction-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--text-3);
+  color: var(--text-3);
+}
+.correction-add {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}

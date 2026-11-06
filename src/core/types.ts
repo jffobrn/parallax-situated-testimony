@@ -200,6 +200,8 @@ export interface Recording {
   /** Total length in seconds; drives the transport when no file is present. */
   durationSec?: number
   recordedOn?: { value: string; precision: TimePrecision }
+  /** Who asked, who translated, and in what languages. */
+  interview?: InterviewConditions
   note?: string
 }
 
@@ -221,6 +223,82 @@ export interface SceneModel {
   note?: string
 }
 
+// --- The witness as author --------------------------------------------------
+
+/**
+ * How a statement was given. A model can prompt memory as well as record it, so
+ * the record says whether the words came before the model was shown, with the
+ * model on screen, or prompted by a document or image.
+ */
+export type ElicitationMode = 'free-recall' | 'model-assisted' | 'prompted' | 'unrecorded'
+
+export interface Elicitation {
+  mode: ElicitationMode
+  /** For 'prompted': what prompted it (a photograph, a document). */
+  prompt?: string
+  /** For 'model-assisted': the camera view on screen when it was given. Never published. */
+  viewpoint?: Viewpoint
+  /** When the view was logged (ISO). */
+  loggedAt?: string
+}
+
+/** What the statement rests on: what the narrator perceived, inferred, or was told. */
+export type Basis = 'perceived' | 'inferred' | 'hearsay'
+
+export type CorrectionKind = 'correction' | 'negation' | 'addition' | 'withdrawal'
+export type CorrectionBy = 'narrator' | 'interviewer' | 'interpreter'
+
+/**
+ * One entry in a statement's correction log. The log is append-only: an entry
+ * can be superseded, with a reason, but never deleted, because a witness's
+ * revisions ("not there", "not like that") are part of the evidence.
+ */
+export interface Correction {
+  id: string
+  /** When it was made (ISO date). */
+  at: string
+  by: CorrectionBy
+  kind: CorrectionKind
+  text: string
+  /** Set when a later entry supersedes this one; the entry stays. */
+  supersededReason?: string
+}
+
+export type ReviewStatus = 'unreviewed' | 'agreed' | 'agreed-with-changes' | 'withdrawn'
+export type ReviewMethod = 'read-back' | 'shown-model' | 'in-writing' | 'other'
+
+/**
+ * The narrator's own review of the statement before anything is published. Only
+ * a statement the narrator has agreed to crosses the consent boundary.
+ */
+export interface NarratorReview {
+  status: ReviewStatus
+  /** When reviewed (ISO date). */
+  on?: string
+  how?: ReviewMethod
+}
+
+/** Someone present at the interview other than the narrator. */
+export interface InterviewParticipant {
+  name?: string
+  /** Governs whether the name may appear in published output. */
+  identityConsent: Consent
+}
+
+/**
+ * The conditions of the interview: the listener shapes the speech, so the
+ * record keeps who asked, who translated, and in what languages. The setting
+ * can locate a witness and is never published.
+ */
+export interface InterviewConditions {
+  interviewer?: InterviewParticipant
+  interpreter?: InterviewParticipant
+  /** Languages spoken and translated, e.g. "Arabic, interpreted into English". */
+  languages?: string
+  /** Where and how the interview took place. Private. Never published. */
+  setting?: string
+}
+
 /**
  * One time-coded segment of the account: the atomic unit. It carries the words,
  * an optional clip into the recording, the real-world time it refers to, where in
@@ -239,6 +317,15 @@ export interface Statement {
   anchor?: Anchor
   /** A saved 3D camera pose the selection flies to. */
   viewpoint?: Viewpoint
+  /** How the statement was given. */
+  elicitation?: Elicitation
+  /** What the statement rests on. */
+  basis?: Basis
+  /** The append-only correction log. */
+  corrections?: Correction[]
+  /** The narrator's review; absent means not yet reviewed. */
+  review?: NarratorReview
+  /** How firmly the narrator holds this (not a judgement of reliability). */
   certainty: Certainty
   consent: Consent
   sovereignty: Sovereignty
@@ -269,7 +356,7 @@ export interface Project {
 
 // --- Export envelope -------------------------------------------------------
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 /**
  * The full project as written to a single file (the user's own keeping). This is
@@ -342,6 +429,12 @@ export interface PublicRecording {
   title: string
   durationSec?: number
   recordedOn?: { value: string; precision: TimePrecision }
+  /** Who asked and who translated: roles always, names only with consent. */
+  interview?: {
+    interviewer?: { name?: string }
+    interpreter?: { name?: string }
+    languages?: string
+  }
   /** Recording media is cited by hash, never embedded in the public build. */
   file?: PublicFileRef
   link?: PublicLink
@@ -362,6 +455,13 @@ export interface PublicStatement {
   refersTo?: { value: string; precision: TimePrecision }
   anchor?: PublicAnchor
   certainty: Certainty
+  /** How it was given, without the logged camera view. */
+  elicitation?: { mode: ElicitationMode; prompt?: string }
+  basis?: Basis
+  /** The correction log, published under the statement's own consent. */
+  corrections: Omit<Correction, 'id'>[]
+  /** The narrator's review (only agreed statements publish). */
+  review: { status: 'agreed' | 'agreed-with-changes'; on?: string; how?: ReviewMethod }
   /** The shown sovereignty labels (restricting labels never reach here). */
   labels: PublicLabel[]
   tags: string[]
@@ -388,6 +488,12 @@ export interface Redactions {
   statementsDropped: number
   droppedByConsent: { restricted: number; embargoed: number }
   droppedByLabel: number
+  /** Not yet reviewed by the narrator, so held back. */
+  droppedUnreviewed: number
+  /** Withdrawn by the narrator on review. */
+  droppedWithdrawn: number
+  /** Interviewer or interpreter names withheld for lack of consent. */
+  interviewNamesWithheld: number
   narratorsAliased: number
   narratorsWithheld: number
   coordinatesWithheld: number
