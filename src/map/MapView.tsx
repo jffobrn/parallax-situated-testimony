@@ -36,9 +36,16 @@ const BASEMAP_KEY = 'situated-testimony.basemap'
 const LABELS_KEY = 'situated-testimony.labels'
 
 /** Persisted default. 'file' is a per-session choice and is never persisted. */
+/**
+ * Persisted default. The fictional sample sits at invented coordinates with no
+ * imagery under them, so with no stored choice it opens on the measured grid
+ * instead of on blank tiles.
+ */
 function loadBasemapPref(): BasemapSource {
   const v = typeof localStorage !== 'undefined' ? localStorage.getItem(BASEMAP_KEY) : null
-  return v === 'streets' || v === 'topo' || v === 'graticule' ? v : 'satellite'
+  if (v === 'streets' || v === 'topo' || v === 'graticule' || v === 'satellite') return v
+  const sample = useStore.getState().project.testimony.tags?.includes('fictional-sample')
+  return sample ? 'graticule' : 'satellite'
 }
 
 function loadLabelsPref(): boolean {
@@ -55,6 +62,7 @@ function collectPoints(project: Project): [number, number][] {
   for (const s of project.statements) {
     push(s.anchor?.geo)
   }
+  for (const cs of project.testimony.cameraSets ?? []) for (const c of cs.cameras) push(c)
   return out
 }
 
@@ -93,8 +101,9 @@ export function MapView() {
   const [toolSlot, setToolSlot] = useState<HTMLElement | null>(null)
   useEffect(() => setToolSlot(document.getElementById(MAP_TOOLS_SLOT)), [])
 
-  const dataRef = useRef({ project, selectedStatementId, hoveredId, activeId, ground })
-  dataRef.current = { project, selectedStatementId, hoveredId, activeId, ground }
+  const selectedCameraId = useStore((s) => s.selectedCameraId)
+  const dataRef = useRef({ project, selectedStatementId, hoveredId, activeId, ground, selectedCameraId })
+  dataRef.current = { project, selectedStatementId, hoveredId, activeId, ground, selectedCameraId }
   const measuringRef = useRef(false)
   const measurePtsRef = useRef<LngLatTuple[]>([])
   measuringRef.current = measuring
@@ -119,6 +128,8 @@ export function MapView() {
       graticule: graticuleLines(bounds),
       ground: d.ground,
       onPickStatement: (id) => useStore.getState().selectStatement(id),
+      selectedCameraId: d.selectedCameraId,
+      onPickCamera: (id) => useStore.getState().selectCamera(id),
     })
     return [...layers, ...measureLayers()]
   }
@@ -352,7 +363,7 @@ export function MapView() {
   useEffect(() => {
     rebuild()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project, selectedStatementId, hoveredId, activeId, measurePts, ground])
+  }, [project, selectedStatementId, hoveredId, activeId, measurePts, ground, selectedCameraId])
 
   // A theme change repaints the grid's background under the tiles.
   const firstTheme = useRef(true)
@@ -449,6 +460,9 @@ export function MapView() {
         <div className="legend-row"><span className="sw sw-anchor" /> Statement anchor</div>
         <div className="legend-row"><span className="sw sw-sel" /> In focus</div>
         <div className="legend-row"><span className="sw sw-place" /> Testimony place</div>
+        {(project.testimony.cameraSets?.length ?? 0) > 0 && (
+          <div className="legend-row"><span className="sw sw-camera" /> Camera from another instrument</div>
+        )}
         <div className="legend-row"><span className="sw sw-unsafe" /> Protected</div>
       </div>
       <MeasureControl
@@ -690,12 +704,8 @@ function MapSearch({ onGoto }: { onGoto: (lat: number, lng: number) => void }) {
 }
 
 function fitToData(map: maplibregl.Map, project: ReturnType<typeof useStore.getState>['project']) {
-  const pts: [number, number][] = []
-  if (project.testimony.place) pts.push([project.testimony.place.lng, project.testimony.place.lat])
-  for (const st of project.statements) {
-    if (st.anchor?.geo) pts.push([st.anchor.geo.lng, st.anchor.geo.lat])
-  }
-  if (pts.length < 2) return
+  const pts = collectPoints(project)
+  if (pts.length === 0) return
   const bounds = pts.reduce(
     (b, p) => b.extend(p),
     new maplibregl.LngLatBounds(pts[0], pts[0]),
@@ -706,14 +716,26 @@ function fitToData(map: maplibregl.Map, project: ReturnType<typeof useStore.getS
 function MapPlacementBanner() {
   const placing = useStore((s) => s.placing)
   const setPlacing = useStore((s) => s.setPlacing)
-  if (!placing || placing.kind === 'statement-model') return null
+  if (!placing || placing.kind === 'statement-model' || placing.kind === 'georef-model') return null
+  const georef = placing.kind === 'georef-geo'
   const what = placing.kind === 'testimony-place' ? 'testimony place' : 'statement anchor'
   return (
     <div className="map-banner">
       <span>
-        Click the map to place the <b>{what}</b>
+        {georef ? (
+          <>
+            Georeference: click point <b>{placing.point.toUpperCase()}</b> on the map, where it stands on the ground
+          </>
+        ) : (
+          <>
+            Click the map to place the <b>{what}</b>
+          </>
+        )}
       </span>
-      <button className="btn btn-sm btn-ghost" onClick={() => setPlacing(null)}>
+      <button
+        className="btn btn-sm btn-ghost"
+        onClick={() => (georef ? useStore.getState().cancelGeorefMatch() : setPlacing(null))}
+      >
         Cancel
       </button>
     </div>

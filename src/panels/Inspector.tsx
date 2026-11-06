@@ -3,6 +3,8 @@ import { ConsentBadge, Dir, roleLabel } from '../components/ui'
 import { narratorOf, statementSnippet } from '../lib/derive'
 import { StatementEditor } from './StatementEditor'
 import { NarratorEditor } from './NarratorEditor'
+import { CameraPanel } from './MeetingPlace'
+import { allCameras } from '../lib/cameras'
 import { TestimonyEditor } from './TestimonyEditor'
 
 function PaneHead({ where }: { where: string }) {
@@ -22,6 +24,7 @@ export function Inspector() {
   const project = useStore((s) => s.project)
   const selectedStatementId = useStore((s) => s.selectedStatementId)
   const selectedNarratorId = useStore((s) => s.selectedNarratorId)
+  const selectedCameraId = useStore((s) => s.selectedCameraId)
 
   const statement = selectedStatementId
     ? project.statements.find((s) => s.id === selectedStatementId)
@@ -29,6 +32,28 @@ export function Inspector() {
   const narrator = selectedNarratorId
     ? project.testimony.narrators.find((n) => n.id === selectedNarratorId)
     : undefined
+
+  const cams = allCameras(project.testimony)
+  const camHit = selectedCameraId ? cams.find((c) => c.camera.id === selectedCameraId) : undefined
+  if (camHit) {
+    return (
+      <>
+        <PaneHead where={`Camera ${cams.indexOf(camHit) + 1} of ${cams.length}`} />
+        <div className="inspector-head">
+          <div className="kicker">
+            <span>Camera, from {camHit.set.tool === 'atlas' ? 'Atlas' : 'Sightlines'}</span>
+            <ConsentBadge consent={camHit.camera.consent} />
+          </div>
+          <div className="inspector-title">
+            <Dir text={camHit.camera.label} />
+          </div>
+        </div>
+        <div className="scroll-y grow">
+          <CameraPanel key={camHit.camera.id} camera={camHit.camera} />
+        </div>
+      </>
+    )
+  }
 
   if (statement) {
     const by = narratorOf(project, statement)

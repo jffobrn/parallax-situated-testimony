@@ -36,6 +36,10 @@ one click away when even that is unwanted.
   - [The correction log](#the-correction-log)
   - [Narrator review](#narrator-review)
   - [The interview](#the-interview)
+- [The model as meeting place](#the-model-as-meeting-place)
+  - [Georeferencing the model](#georeferencing-the-model)
+  - [Cameras from Sightlines and Atlas](#cameras-from-sightlines-and-atlas)
+  - [Looking through a camera](#looking-through-a-camera)
 - [The recording transport](#the-recording-transport)
 - [The three views](#the-three-views)
 - [The map: basemap, search, and measure](#the-map-basemap-search-and-measure)
@@ -338,6 +342,56 @@ only when it is marked **Named**, and otherwise the published file says the role
 was filled without naming the person. The **setting** (where and how the
 interview took place) can locate a witness, so it stays in the project and is
 never published.
+
+---
+
+## The model as meeting place
+
+In Forensic Architecture's "architectural-image complex", every camera and its
+view is placed inside one model, which is used as an optical device (Bois et al.
+2016, 125). Situated Testimony can now hold the camera positions recorded in
+Sightlines and Atlas inside its own model, so the testimony, the photographs, and
+the site meet in one space.
+
+### Georeferencing the model
+
+The model has its own coordinate space; a georeference ties it to the ground. In
+the testimony editor, under **Georeference**:
+
+- **Match two points** is the reliable way. Click a point on the model, then the
+  same point on the map; then a second pair. The tool solves the scale (metres per
+  model unit), the rotation from north, and the origin. Choose two points far
+  apart, such as the two ends of a wall.
+- Or type the **origin** (where the model's 0, 0, 0 stands), the **metres per
+  unit**, and the **rotation** (the bearing the model's north points to).
+- The procedural massing is tied to the testimony place by default: one unit per
+  metre, north up.
+
+Once georeferenced, the map shows the model's footprint.
+
+### Cameras from Sightlines and Atlas
+
+In Sightlines and Atlas, each placed vantage records where a photograph was taken
+from, which way the camera faced, and how wide it saw. Under **Cameras from other
+instruments**, **Add cameras from a project file** reads those positions from a
+Sightlines or Atlas project file. The file is cited by its sha-256; only the
+positions, bearings, fields of view, confidence, and each photograph's title and
+consent are kept.
+
+The cameras appear in the outline's **Cameras** group, on the map with their
+rays, and in the model standing at eye height (1.6 m by default; set **Eye
+height** to change it) with their view drawn as a frustum. A camera whose
+photograph is restricted or embargoed in its own tool reads in red.
+
+The cameras are working reference. They are never published from Situated
+Testimony; to change one, change it in its own tool and bring the file in again.
+
+### Looking through a camera
+
+Select a camera and press **Look through**: the 3D view stands where the camera
+stood, faces where it faced, and sees as wide as it saw. This is the model seen
+from the photograph's vantage, which is where a testimony about what could be
+seen from there can be tested. **Return to orbit** gives the view back.
 
 ---
 

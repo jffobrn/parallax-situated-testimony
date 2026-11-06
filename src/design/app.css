@@ -758,3 +758,18 @@
   padding-top: 10px;
   border-top: 1px solid var(--line);
 }
+
+/* ---- Cameras from other instruments ------------------------------------ */
+.sw-camera {
+  background: var(--text-2);
+}
+.model-label {
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  background: var(--input);
+  border: 1px solid var(--line-2);
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text);
+  transform: translateY(-18px);
+}

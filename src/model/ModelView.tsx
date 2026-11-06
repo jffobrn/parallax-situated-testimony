@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
-import { Edges, Html, OrbitControls, useGLTF } from '@react-three/drei'
+import { Edges, Html, Line, OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { type ModelAnchor, type SceneModel, type Viewpoint } from '../core'
 import { useStore } from '../state/store'
@@ -10,6 +10,8 @@ import { activeStatementId, modelAnchors, statementSnippet } from '../lib/derive
 import { viewpointBridge } from './viewpointBridge'
 import { token, useTheme, type Theme } from '../state/theme'
 import { MAP_TOOLS_SLOT, ToolIcon } from '../panels/Toolbar'
+import { allCameras, effectiveGeoref } from '../lib/cameras'
+import { bearingToModelDir, geoToModel, metresToUnits, type ModelGeoref, type RefCamera } from '../core'
 
 /** Scene colours, read from the design tokens so the model follows the theme. */
 interface SceneColours {
@@ -24,6 +26,8 @@ interface SceneColours {
   anchor: string
   hover: string
   focus: string
+  camera: string
+  withheld: string
 }
 
 function readScene(theme: Theme): SceneColours {
@@ -40,6 +44,8 @@ function readScene(theme: Theme): SceneColours {
     anchor: token('--primary'),
     hover: token('--signal-dim'),
     focus: token('--mark'),
+    camera: token('--text-2'),
+    withheld: token('--alert'),
   }
 }
 
@@ -58,7 +64,10 @@ function useSceneColours(): SceneColours {
 export function ModelView() {
   const model = useStore((s) => s.project.testimony.model)
   const placing = useStore((s) => s.placing)
-  const placingHere = placing?.kind === 'statement-model'
+  const placingHere = placing?.kind === 'statement-model' || placing?.kind === 'georef-model'
+  const lookThroughId = useStore((s) => s.lookThroughId)
+  const testimony = useStore((s) => s.project.testimony)
+  const looking = lookThroughId ? allCameras(testimony).find((c) => c.camera.id === lookThroughId) : undefined
   const C = useSceneColours()
   const [toolSlot, setToolSlot] = useState<HTMLElement | null>(null)
   useEffect(() => setToolSlot(document.getElementById(MAP_TOOLS_SLOT)), [])
@@ -80,6 +89,7 @@ export function ModelView() {
         </Suspense>
 
         <Anchors colours={C} />
+        <Cameras colours={C} />
         <CameraRig />
         <ViewpointBridge />
 
@@ -90,15 +100,39 @@ export function ModelView() {
       <div className="stage-readout">{model?.title ?? 'Procedural massing'}</div>
       {placingHere && (
         <div className="map-banner">
-          <span>Click the model to anchor the statement</span>
-          <button className="btn btn-sm btn-ghost" onClick={() => useStore.getState().setPlacing(null)}>
+          <span>
+            {placing?.kind === 'georef-model'
+              ? `Georeference: click point ${placing.point.toUpperCase()} on the model, then the same point on the map`
+              : 'Click the model to anchor the statement'}
+          </span>
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() =>
+              placing?.kind === 'georef-model'
+                ? useStore.getState().cancelGeorefMatch()
+                : useStore.getState().setPlacing(null)
+            }
+          >
             Cancel
+          </button>
+        </div>
+      )}
+      {looking && !placingHere && (
+        <div className="map-banner">
+          <span title={`From ${looking.set.title}`}>
+            Looking through <b>{looking.camera.label}</b>
+          </span>
+          <button className="btn btn-sm btn-ghost" onClick={() => useStore.getState().setLookThrough(null)}>
+            Return to orbit
           </button>
         </div>
       )}
       <div className="model-legend" aria-label="Model key">
         <div className="legend-row"><span className="sw sw-anchor" /> Statement anchor</div>
         <div className="legend-row"><span className="sw sw-sel" /> In focus</div>
+        {(testimony.cameraSets?.length ?? 0) > 0 && (
+          <div className="legend-row"><span className="sw sw-camera" /> Camera from another instrument</div>
+        )}
         <div className="legend-row faint">Drag to orbit, scroll to zoom</div>
       </div>
     </>
@@ -317,6 +351,74 @@ function AnchorMarker({
   )
 }
 
+/** Where an imported camera stands in model space, and which way it looks. */
+export function cameraPose(g: ModelGeoref, cam: RefCamera, eyeM: number) {
+  const p = geoToModel(g, cam)
+  const d = bearingToModelDir(g, cam.bearingDeg)
+  const y = metresToUnits(g, eyeM)
+  return { pos: new THREE.Vector3(p.x, y, p.z), dir: new THREE.Vector3(d.x, 0, d.z) }
+}
+
+/**
+ * The cameras brought in from Sightlines and Atlas, standing in the model at
+ * eye height, each with its field of view drawn as a frustum. Working reference
+ * only: none of this publishes.
+ */
+function Cameras({ colours: C }: { colours: SceneColours }) {
+  const testimony = useStore((s) => s.project.testimony)
+  const selectedCameraId = useStore((s) => s.selectedCameraId)
+  const lookThroughId = useStore((s) => s.lookThroughId)
+  const g = effectiveGeoref(testimony)
+  if (!g) return null
+  const eye = testimony.cameraEyeHeightM ?? 1.6
+  return (
+    <>
+      {allCameras(testimony).map(({ camera }) => {
+        if (camera.id === lookThroughId) return null
+        const { pos, dir } = cameraPose(g, camera, eye)
+        const sel = camera.id === selectedCameraId
+        const colour = sel ? C.focus : camera.consent === 'public' ? C.camera : C.withheld
+        const len = metresToUnits(g, 14)
+        const h = ((camera.fovDeg ?? 50) / 2) * (Math.PI / 180)
+        const half = Math.tan(h) * len
+        const vhalf = half * 0.75
+        const side = new THREE.Vector3(-dir.z, 0, dir.x)
+        const far = pos.clone().add(dir.clone().multiplyScalar(len))
+        const corners = [
+          far.clone().add(side.clone().multiplyScalar(half)).add(new THREE.Vector3(0, vhalf, 0)),
+          far.clone().add(side.clone().multiplyScalar(-half)).add(new THREE.Vector3(0, vhalf, 0)),
+          far.clone().add(side.clone().multiplyScalar(-half)).add(new THREE.Vector3(0, -vhalf, 0)),
+          far.clone().add(side.clone().multiplyScalar(half)).add(new THREE.Vector3(0, -vhalf, 0)),
+        ]
+        const pts: THREE.Vector3[] = []
+        for (const c of corners) pts.push(pos, c)
+        const rim = [...corners, corners[0]]
+        return (
+          <group key={camera.id}>
+            <mesh
+              position={pos}
+              onPointerDown={(e) => {
+                e.stopPropagation()
+                useStore.getState().selectCamera(camera.id)
+              }}
+            >
+              <sphereGeometry args={[metresToUnits(g, sel ? 0.9 : 0.6), 16, 12]} />
+              <meshBasicMaterial color={colour} />
+            </mesh>
+            <Line points={pts} segments color={colour} lineWidth={sel ? 2 : 1} transparent opacity={0.85} />
+            <Line points={rim} color={colour} lineWidth={sel ? 2 : 1} transparent opacity={0.85} />
+            {sel && (
+              <Html position={pos} center style={{ pointerEvents: 'none' }}>
+                <div className="model-label">{camera.label}</div>
+              </Html>
+            )}
+          </group>
+        )
+      })}
+    </>
+  )
+}
+
 /**
  * Registers a capture of the live camera pose for the statement editor to save.
  */
@@ -350,8 +452,40 @@ function CameraRig() {
   const lastFocus = useRef<string | null | undefined>(undefined)
   const flying = useRef<Viewpoint | null>(null)
 
+  const lastLook = useRef<string | null>(null)
+
   useFrame((state) => {
     const st = useStore.getState()
+    const cam = state.camera as THREE.PerspectiveCamera
+    const lookControls = state.controls as unknown as { target: THREE.Vector3; update: () => void } | null
+
+    // Looking through an imported camera: stand where it stood, face where it
+    // faced, and see as wide as it saw.
+    const lookId = st.lookThroughId
+    if (lookId) {
+      const g = effectiveGeoref(st.project.testimony)
+      const hit = allCameras(st.project.testimony).find((c) => c.camera.id === lookId)
+      if (g && hit && lookControls?.target) {
+        const { pos, dir } = cameraPose(g, hit.camera, st.project.testimony.cameraEyeHeightM ?? 1.6)
+        const target = pos.clone().add(dir.multiplyScalar(metresToUnits(g, 30)))
+        cam.position.lerp(pos, lastLook.current === lookId ? 0.25 : 0.12)
+        lookControls.target.lerp(target, lastLook.current === lookId ? 0.25 : 0.12)
+        const hfov = (hit.camera.fovDeg ?? 50) * (Math.PI / 180)
+        const vfov = (2 * Math.atan(Math.tan(hfov / 2) / cam.aspect) * 180) / Math.PI
+        if (Math.abs(cam.fov - vfov) > 0.01) {
+          cam.fov = vfov
+          cam.updateProjectionMatrix()
+        }
+        lookControls.update()
+        if (cam.position.distanceTo(pos) < 0.02) lastLook.current = lookId
+        return
+      }
+    } else if (lastLook.current !== null || cam.fov !== 45) {
+      lastLook.current = null
+      cam.fov = 45
+      cam.updateProjectionMatrix()
+    }
+
     const focusId = st.selectedStatementId ?? activeStatementId(st.project, st.playheadSec)
     const stmt = focusId ? st.project.statements.find((s) => s.id === focusId) : undefined
     const controls = state.controls as unknown as { target: THREE.Vector3; update: () => void } | null

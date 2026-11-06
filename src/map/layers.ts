@@ -6,8 +6,9 @@
  */
 
 import type { Layer } from '@deck.gl/core'
-import { PathLayer, ScatterplotLayer } from '@deck.gl/layers'
-import type { Project } from '../core'
+import { LineLayer, PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers'
+import { fromLocalEN, modelToGeo, type Project } from '../core'
+import { allCameras, effectiveGeoref } from '../lib/cameras'
 import type { Graticule } from './basemap'
 import { mapPalette, type Ground } from './palette'
 
@@ -20,6 +21,9 @@ export interface BuildLayersArgs {
   /** Whether the ground under the marks is dark (imagery) or light. */
   ground?: Ground
   onPickStatement?: (id: string) => void
+  /** The imported camera in focus. */
+  selectedCameraId?: string | null
+  onPickCamera?: (id: string) => void
 }
 
 interface PointDatum {
@@ -47,6 +51,32 @@ export function buildMapLayers(args: BuildLayersArgs): Layer[] {
   }
 
   const layers: Layer[] = []
+
+  // The model's footprint once it is tied to the ground (the procedural
+  // massing's extent; a loaded model's extent is not known here).
+  const g = effectiveGeoref(project.testimony)
+  const procedural = !project.testimony.model || project.testimony.model.kind === 'procedural'
+  const footprint =
+    g && procedural
+      ? [
+          [-30, -20],
+          [30, -20],
+          [30, 20],
+          [-30, 20],
+          [-30, -20],
+        ].map(([x, z]) => {
+          const p = modelToGeo(g, { x, z })
+          return [p.lng, p.lat] as [number, number]
+        })
+      : null
+
+  // Cameras brought in from Sightlines and Atlas, each with a short ray.
+  const cams = allCameras(project.testimony).map(({ camera }) => {
+    const b = (camera.bearingDeg * Math.PI) / 180
+    // Long enough to reach a site a few hundred metres off, as photographs often are.
+    const end = fromLocalEN(camera, Math.sin(b) * 320, Math.cos(b) * 320)
+    return { camera, source: [camera.lng, camera.lat] as [number, number], target: [end.lng, end.lat] as [number, number] }
+  })
 
   // Graticule, drawn under everything.
   layers.push(
@@ -144,6 +174,60 @@ export function buildMapLayers(args: BuildLayersArgs): Layer[] {
       },
     }),
   )
+
+  if (footprint) {
+    layers.push(
+      new PolygonLayer({
+        id: 'model-footprint',
+        data: [footprint],
+        getPolygon: (d: [number, number][]) => d,
+        getFillColor: C.footprint,
+        getLineColor: C.footprintLine,
+        lineWidthUnits: 'pixels',
+        getLineWidth: 1,
+        stroked: true,
+        filled: true,
+        parameters: { depthTest: false },
+        pickable: false,
+      }),
+    )
+  }
+  if (cams.length) {
+    layers.push(
+      new LineLayer({
+        id: 'camera-rays',
+        data: cams,
+        getSourcePosition: (d: (typeof cams)[number]) => d.source,
+        getTargetPosition: (d: (typeof cams)[number]) => d.target,
+        getColor: (d: (typeof cams)[number]) => (d.camera.id === args.selectedCameraId ? C.sel : C.ray),
+        getWidth: (d: (typeof cams)[number]) => (d.camera.id === args.selectedCameraId ? 2.4 : 1.2),
+        widthUnits: 'pixels',
+        updateTriggers: { getColor: [args.selectedCameraId], getWidth: [args.selectedCameraId] },
+        parameters: { depthTest: false },
+        pickable: false,
+      }),
+      new ScatterplotLayer({
+        id: 'cameras',
+        data: cams,
+        getPosition: (d: (typeof cams)[number]) => d.source,
+        getRadius: (d: (typeof cams)[number]) => (d.camera.id === args.selectedCameraId ? 6 : 4.5),
+        radiusUnits: 'pixels',
+        filled: true,
+        getFillColor: (d: (typeof cams)[number]) => (d.camera.consent === 'public' ? C.camera : C.alert),
+        stroked: true,
+        getLineColor: C.anchorLine,
+        lineWidthUnits: 'pixels',
+        getLineWidth: 1,
+        pickable: true,
+        onClick: (info) => {
+          const d = info.object as (typeof cams)[number] | undefined
+          if (d && args.onPickCamera) args.onPickCamera(d.camera.id)
+        },
+        updateTriggers: { getRadius: [args.selectedCameraId] },
+        parameters: { depthTest: false },
+      }),
+    )
+  }
 
   return layers
 }

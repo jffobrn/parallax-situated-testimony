@@ -8,6 +8,7 @@
 
 import { create } from 'zustand'
 import { viewpointBridge } from '../model/viewpointBridge'
+import { solveTwoPoint } from '../core/georef'
 import {
   blankSovereignty,
   clearProject,
@@ -18,6 +19,7 @@ import {
   type GeoPoint,
   type ModelAnchor,
   type Narrator,
+  type CameraSet,
   type Project,
   type Recording,
   type SceneModel,
@@ -35,7 +37,18 @@ export type Placing =
   | { kind: 'testimony-place' }
   | { kind: 'statement-geo'; statementId: string }
   | { kind: 'statement-model'; statementId: string }
+  /** The two-point georeference: a point in the model, then the same point on the map. */
+  | { kind: 'georef-model'; point: 'a' | 'b' }
+  | { kind: 'georef-geo'; point: 'a' | 'b' }
   | null
+
+/** The points matched so far in a two-point georeference. */
+export interface GeorefMatch {
+  aModel?: { x: number; z: number }
+  aGeo?: { lat: number; lng: number }
+  bModel?: { x: number; z: number }
+  bGeo?: { lat: number; lng: number }
+}
 
 export interface AppState {
   project: Project
@@ -45,6 +58,11 @@ export interface AppState {
 
   selectedStatementId: string | null
   selectedNarratorId: string | null
+  /** A camera brought in from another instrument, selected for its properties. */
+  selectedCameraId: string | null
+  /** The camera the 3D view is looking through, if any. */
+  lookThroughId: string | null
+  georefMatch: GeorefMatch | null
   hoveredId: string | null
   editingStatementId: string | null
 
@@ -105,6 +123,13 @@ export interface AppState {
   setPlacing: (placing: Placing) => void
   applyGeoPlacement: (lat: number, lng: number) => void
   applyModelPlacement: (p: ModelAnchor) => void
+  selectCamera: (id: string | null) => void
+  setLookThrough: (id: string | null) => void
+  addCameraSet: (set: CameraSet) => void
+  removeCameraSet: (id: string) => void
+  setEyeHeight: (m: number) => void
+  startGeorefMatch: () => void
+  cancelGeorefMatch: () => void
 }
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
@@ -154,6 +179,9 @@ export const useStore = create<AppState>()((set, get) => {
 
     selectedStatementId: null,
     selectedNarratorId: null,
+    selectedCameraId: null,
+    lookThroughId: null,
+    georefMatch: null,
     hoveredId: null,
     editingStatementId: null,
 
@@ -377,7 +405,7 @@ export const useStore = create<AppState>()((set, get) => {
     },
 
     selectStatement(id) {
-      set({ selectedStatementId: id, selectedNarratorId: null })
+      set({ selectedStatementId: id, selectedNarratorId: null, selectedCameraId: null })
       // Picking a statement cues the recording to its clip, the synchronized move.
       if (id) {
         const st = get().project.statements.find((s) => s.id === id)
@@ -385,7 +413,36 @@ export const useStore = create<AppState>()((set, get) => {
       }
     },
     selectNarrator(id) {
-      set({ selectedNarratorId: id, selectedStatementId: null })
+      set({ selectedNarratorId: id, selectedStatementId: null, selectedCameraId: null })
+    },
+    selectCamera(id) {
+      set({ selectedCameraId: id, selectedStatementId: null, selectedNarratorId: null })
+    },
+    setLookThrough(id) {
+      set({ lookThroughId: id })
+      if (id) set({ view: 'model' })
+    },
+    addCameraSet(cs) {
+      const p = get().project
+      commit({ ...p, testimony: { ...p.testimony, cameraSets: [...(p.testimony.cameraSets ?? []), cs] } })
+    },
+    removeCameraSet(id) {
+      const p = get().project
+      const sets = (p.testimony.cameraSets ?? []).filter((c) => c.id !== id)
+      commit({ ...p, testimony: { ...p.testimony, cameraSets: sets } })
+      const ids = new Set(sets.flatMap((c) => c.cameras.map((k) => k.id)))
+      if (get().selectedCameraId && !ids.has(get().selectedCameraId!)) set({ selectedCameraId: null })
+      if (get().lookThroughId && !ids.has(get().lookThroughId!)) set({ lookThroughId: null })
+    },
+    setEyeHeight(m) {
+      const p = get().project
+      commit({ ...p, testimony: { ...p.testimony, cameraEyeHeightM: m } })
+    },
+    startGeorefMatch() {
+      set({ georefMatch: {}, placing: { kind: 'georef-model', point: 'a' }, view: 'model' })
+    },
+    cancelGeorefMatch() {
+      set({ georefMatch: null, placing: null })
     },
     hover(id) {
       set({ hoveredId: id })
@@ -427,7 +484,27 @@ export const useStore = create<AppState>()((set, get) => {
 
     applyGeoPlacement(lat, lng) {
       const placing = get().placing
-      if (!placing || placing.kind === 'statement-model') return
+      if (!placing || placing.kind === 'statement-model' || placing.kind === 'georef-model') return
+      if (placing.kind === 'georef-geo') {
+        const m = { ...get().georefMatch, [placing.point === 'a' ? 'aGeo' : 'bGeo']: { lat, lng } }
+        if (placing.point === 'a') {
+          set({ georefMatch: m, placing: { kind: 'georef-model', point: 'b' }, view: 'model' })
+          return
+        }
+        set({ georefMatch: null, placing: null })
+        const sol =
+          m.aModel && m.aGeo && m.bModel && m.bGeo
+            ? solveTwoPoint({ model: m.aModel, geo: m.aGeo }, { model: m.bModel, geo: m.bGeo })
+            : null
+        const model = get().project.testimony.model
+        if (!sol) {
+          get().notify('The two points coincide; the georeference was not changed.')
+          return
+        }
+        get().setModel({ ...(model ?? { id: newId('mdl'), title: 'Scene model', kind: 'procedural', consent: 'public' }), georef: sol })
+        get().notify('Model georeferenced from two points.')
+        return
+      }
       const p = get().project
       lat = Math.round(lat * 1e6) / 1e6
       lng = Math.round(lng * 1e6) / 1e6
@@ -457,6 +534,15 @@ export const useStore = create<AppState>()((set, get) => {
 
     applyModelPlacement(point) {
       const placing = get().placing
+      if (placing?.kind === 'georef-model') {
+        const key = placing.point === 'a' ? 'aModel' : 'bModel'
+        set({
+          georefMatch: { ...get().georefMatch, [key]: { x: point.x, z: point.z } },
+          placing: { kind: 'georef-geo', point: placing.point },
+          view: 'map',
+        })
+        return
+      }
       if (!placing || placing.kind !== 'statement-model') return
       const p = get().project
       const st = p.statements.find((s) => s.id === placing.statementId)

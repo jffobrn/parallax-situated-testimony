@@ -12,6 +12,7 @@ import { ingestFile } from '../lib/ingest'
 import { findWaybackSnapshot } from '../lib/wayback'
 import { PointFields } from '../components/points'
 import { SovereigntyEditor } from '../components/Sovereignty'
+import { CameraSetsFields, GeorefFields } from './MeetingPlace'
 import {
   ConsentChoice,
   EnumSeg,
@@ -151,6 +152,12 @@ export function TestimonyEditor() {
 
       <div className="divider" />
       <ModelFields />
+
+      <div className="divider" />
+      <GeorefFields />
+
+      <div className="divider" />
+      <CameraSetsFields />
 
       <div className="divider" />
       <span className="label">Sovereignty</span>

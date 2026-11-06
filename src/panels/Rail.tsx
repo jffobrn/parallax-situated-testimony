@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import { formatDateTimeShort, hasRestrictingLabel, type Narrator, type Statement } from '../core'
 import { useStore } from '../state/store'
 import { publishState } from '../lib/review'
+import { allCameras } from '../lib/cameras'
 import { allTags, narratorOf, statementSnippet } from '../lib/derive'
 import { readFileText } from '../lib/download'
 import { ConsentBadge, Dir, Menu, SelectMenu, roleLabel, rowButton } from '../components/ui'
@@ -53,6 +54,7 @@ function isWithheld(st: Statement): boolean {
 export function Rail() {
   const project = useStore((s) => s.project)
   const selectedStatementId = useStore((s) => s.selectedStatementId)
+  const selectedCameraId = useStore((s) => s.selectedCameraId)
   const selectedNarratorId = useStore((s) => s.selectedNarratorId)
   const hoveredId = useStore((s) => s.hoveredId)
   const notify = useStore((s) => s.notify)
@@ -270,6 +272,43 @@ export function Rail() {
           </table>
         )}
       </Group>
+
+      {(project.testimony.cameraSets?.length ?? 0) > 0 && (
+        <Group title="Cameras" count={allCameras(project.testimony).length}>
+          <table className="outline">
+            <colgroup>
+              <col />
+              <col className="c-role" />
+              <col className="c-clip" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Photograph</th>
+                <th>From</th>
+                <th>Facing</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allCameras(project.testimony).map(({ camera, set }) => (
+                <tr
+                  key={camera.id}
+                  className="row"
+                  data-selected={camera.id === selectedCameraId}
+                  data-withheld={camera.consent !== 'public'}
+                  {...rowButton(() => useStore.getState().selectCamera(camera.id))}
+                  title={`${camera.label}, from ${set.title}. Working reference; never published.`}
+                >
+                  <td className="row-title">
+                    <Dir text={camera.label} />
+                  </td>
+                  <td>{set.tool === 'atlas' ? 'Atlas' : 'Sightlines'}</td>
+                  <td className="mono">{Math.round(camera.bearingDeg)}&deg;</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Group>
+      )}
     </>
   )
 }

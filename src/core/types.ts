@@ -20,6 +20,8 @@
  * playhead, the narrative) is computed at read time, never persisted as fact.
  */
 
+import type { ModelGeoref } from './georef'
+
 /** Whether a statement, a narrator's identity, or a model may appear in anything published. */
 export type Consent = 'public' | 'restricted' | 'embargoed'
 
@@ -220,7 +222,41 @@ export interface SceneModel {
   /** A glTF/glb loaded from a URL for the working view; nothing is downloaded. */
   url?: string
   consent: Consent
+  /** Ties the model's own space to the ground, so other instruments' cameras can stand in it. */
+  georef?: ModelGeoref
   note?: string
+}
+
+/**
+ * A camera position brought in from Sightlines or Atlas: where a photograph was
+ * taken, which way it faced, and how wide it saw. Working reference only: it is
+ * never published from this tool.
+ */
+export interface RefCamera {
+  id: string
+  /** The photograph's title in its own tool. */
+  label: string
+  lat: number
+  lng: number
+  bearingDeg: number
+  fovDeg?: number
+  confidence: Certainty
+  /** The source's consent in its own tool, carried for the operator's eye. */
+  consent: Consent
+  safeToPublish: boolean
+}
+
+/** The cameras read from one project file, tethered to it by its hash. */
+export interface CameraSet {
+  id: string
+  tool: 'sightlines' | 'atlas'
+  /** The project's title in its own tool. */
+  title: string
+  fileName: string
+  /** sha-256 of the project file bytes (fixity). */
+  sha256: string
+  importedAt: string
+  cameras: RefCamera[]
 }
 
 // --- The witness as author --------------------------------------------------
@@ -347,6 +383,10 @@ export interface Testimony {
   summary?: string
   sovereignty: Sovereignty
   tags: string[]
+  /** Camera positions brought in from other instruments. Operator only. */
+  cameraSets?: CameraSet[]
+  /** Eye height for those cameras above the ground, in metres (default 1.6). */
+  cameraEyeHeightM?: number
 }
 
 export interface Project {

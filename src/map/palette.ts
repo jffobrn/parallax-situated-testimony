@@ -21,11 +21,15 @@ export interface MapPalette {
   measureLine: RGBA
   measurePt: RGBA
   measurePtLine: RGBA
+  camera: RGBA
+  ray: RGBA
+  footprint: RGBA
+  footprintLine: RGBA
 }
 
 const DARK: MapPalette = {
-  minor: [86, 64, 94, 120],
-  major: [122, 96, 132, 170],
+  minor: [70, 68, 63, 140],
+  major: [100, 97, 90, 190],
   anchor: [234, 210, 247, 255],
   anchorLine: [22, 11, 24, 255],
   place: [255, 255, 255, 255],
@@ -35,11 +39,15 @@ const DARK: MapPalette = {
   measureLine: [234, 210, 247, 235],
   measurePt: [234, 210, 247, 255],
   measurePtLine: [22, 11, 24, 255],
+  camera: [255, 255, 255, 255],
+  ray: [255, 255, 255, 140],
+  footprint: [234, 210, 247, 30],
+  footprintLine: [234, 210, 247, 200],
 }
 
 const LIGHT: MapPalette = {
-  minor: [214, 191, 226, 150],
-  major: [185, 150, 204, 210],
+  minor: [214, 211, 203, 170],
+  major: [184, 180, 170, 220],
   anchor: [90, 22, 102, 255],
   anchorLine: [255, 255, 255, 255],
   place: [75, 59, 79, 255],
@@ -49,6 +57,10 @@ const LIGHT: MapPalette = {
   measureLine: [90, 22, 102, 230],
   measurePt: [90, 22, 102, 255],
   measurePtLine: [255, 255, 255, 255],
+  camera: [27, 26, 24, 255],
+  ray: [90, 22, 102, 140],
+  footprint: [90, 22, 102, 22],
+  footprintLine: [90, 22, 102, 190],
 }
 
 export function mapPalette(ground: Ground): MapPalette {
@@ -64,4 +76,4 @@ export function groundFor(basemap: string, theme: 'light' | 'dark'): Ground {
 }
 
 /** The grid ground's background, per theme. */
-export const GRID_BG = { light: '#f3ebf6', dark: '#2a1c2f' } as const
+export const GRID_BG = { light: '#e8e6e0', dark: '#2b2a27' } as const

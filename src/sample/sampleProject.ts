@@ -376,6 +376,24 @@ export async function buildSampleProject(): Promise<Project> {
     ],
     subject: 'place',
     narrators,
+    // The same fictional sea wall as the Atlas sample: its three placed camera
+    // positions, brought in as working reference (never published from here).
+    cameraSets: [
+      {
+        id: 'camset-atlas',
+        tool: 'atlas',
+        title: 'The Sea-Wall Mural: a dispersed image complex',
+        fileName: 'sea-wall-mural.atlas.json',
+        // The hash of a fixed label, standing in for the sample file's bytes.
+        sha256: 'ef7d83deecd94e859c3e573fb18b1f9d1c75f43cc8f0f2cd34cd91ac0192a2e3',
+        importedAt: '2026-11-06T00:00:00Z',
+        cameras: [
+          { id: 'cam-sw', label: 'The mural from the south-west', lat: 34.404, lng: -19.852, bearingDeg: 51.2, fovDeg: 36, confidence: 'attested', consent: 'public', safeToPublish: true },
+          { id: 'cam-se', label: 'The mural from the south-east', lat: 34.4042, lng: -19.8486, bearingDeg: 303.9, fovDeg: 40, confidence: 'attested', consent: 'public', safeToPublish: true },
+          { id: 'cam-white', label: 'The wall after whitewashing', lat: 34.4039, lng: -19.8521, bearingDeg: 47.6, fovDeg: 34, confidence: 'attested', consent: 'public', safeToPublish: true },
+        ],
+      },
+    ],
     recording,
     model,
     place: { ...WALL, safeToPublish: true, name: 'Sea wall, Quai des Marais, Vela (fictional)' },

@@ -4,6 +4,37 @@ All notable changes to Situated Testimony are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses semantic
 versioning.
 
+## [1.6.0] - 2026-11-06
+
+### Added
+
+- The model as meeting place. Georeference the scene model by matching two
+  points in the model with the same two on the map (the tool solves scale,
+  rotation, and origin), or by typing the origin, metres per unit, and
+  rotation. The procedural massing is tied to the testimony place by default.
+  Once georeferenced, the map shows the model's footprint.
+- Cameras from Sightlines and Atlas. Add cameras from a project file reads the
+  placed vantages (position, bearing, field of view, confidence, and each
+  photograph's title and consent) and cites the file by its sha-256. The
+  cameras appear in a Cameras group, on the map with their rays, and in the
+  model at eye height with their view drawn as a frustum.
+- Look through: the 3D view stands where a camera stood, faces where it
+  faced, and sees as wide as it saw.
+- The sample brings in the Atlas sample's three camera positions on the same
+  fictional sea wall.
+
+### Changed
+
+- The map fits to every placed point, cameras included, and the sample opens
+  on the measured grid.
+- The grid ground uses the Workbench greys.
+
+### Security
+
+- Imported cameras and their source files are working reference: nothing
+  about them is published. The smoke test probes for the sample's camera
+  labels and source file name.
+
 ## [1.5.0] - 2026-11-06
 
 ### Added
