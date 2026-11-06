@@ -4,6 +4,15 @@ All notable changes to Situated Testimony are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses semantic
 versioning.
 
+## [1.4.1] - 2026-11-06
+
+### Fixed
+
+- Quiet destructive buttons (Delete, Remove) read in the alert colour again;
+  the quiet button style had been overriding it.
+- The About dialog now describes the map's online retrieval accurately: the
+  basemap and place search fetch when used; the Grid and File grounds do not.
+
 ## [1.4.0] - 2026-11-05
 
 ### Changed

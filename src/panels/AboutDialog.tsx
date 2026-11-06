@@ -50,8 +50,9 @@ export function AboutDialog({
             <p className="faint" style={{ marginTop: 12, fontSize: 13 }}>
               Runs entirely in your browser. The project and its media stay on your
               machine in local storage; nothing is uploaded. The 3D model loads from
-              a local file, and the basemap fetches no tiles. The bundled sample is
-              plainly fictional.
+              a local file or a link you give it. The map retrieves basemap tiles and
+              place searches online when you use them; the Grid and File grounds fetch
+              nothing. The bundled sample is plainly fictional.
             </p>
           </div>
 
