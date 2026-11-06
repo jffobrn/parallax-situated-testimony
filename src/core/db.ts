@@ -73,11 +73,12 @@ export async function getAllMediaKeys(): Promise<string[]> {
   return db.media.toCollection().primaryKeys()
 }
 
-/** Every blobKey the project references (the recording and the model). */
+/** Every blobKey the project references (the recording, the model, and camera photographs). */
 function referencedKeys(project: Project): Set<string> {
   const keys = [
     project.testimony.recording?.file?.blobKey,
     project.testimony.model?.file?.blobKey,
+    ...(project.testimony.cameraSets ?? []).flatMap((cs) => cs.cameras.map((c) => c.photo?.blobKey)),
   ].filter((k): k is string => typeof k === 'string')
   return new Set(keys)
 }

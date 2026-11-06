@@ -4,6 +4,24 @@ All notable changes to Situated Testimony are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses semantic
 versioning.
 
+## [1.7.0] - 2026-11-06
+
+### Added
+
+- The camera match. A camera brought in from a project file that held its
+  photograph keeps the photograph (hashed), and looking through lays it over
+  the model at an adjustable opacity. Adjust heading, tilt, field of view, and
+  eye height until the model's edges sit on the photograph's, judge the fit
+  (close, approximate, poor), and save the match with a note. The saved match
+  is read against the recorded vantage, and the recorded vantage is never
+  changed. Matches, like the cameras and their photographs, never publish.
+
+### Fixed
+
+- A model file that cannot be loaded (a broken or non-glTF file, an
+  unreachable URL) no longer takes the whole tool down: the procedural massing
+  is shown instead, and the status bar says why.
+
 ## [1.6.0] - 2026-11-06
 
 ### Added

@@ -223,10 +223,128 @@ export function CameraPanel({ camera }: { camera: RefCamera }) {
           {camera.safeToPublish ? '' : ', position protected'}
         </dd>
       </dl>
+      {looking && <CameraMatchFields camera={camera} />}
+      {!looking && camera.match && <MatchSummary camera={camera} />}
       <p className="faint" style={{ fontSize: 13, marginTop: 10 }}>
         Working reference from another instrument. Change it there and bring the file in again; nothing about
         this camera is published from Situated Testimony.
       </p>
     </div>
+  )
+}
+
+const FIT_WORD = { close: 'Close', approximate: 'Approximate', poor: 'Poor' } as const
+const signed = (n: number, d = 1) => `${n >= 0 ? '+' : ''}${n.toFixed(d)}`
+
+/** A saved match, read against the vantage recorded in the camera's own tool. */
+function MatchSummary({ camera }: { camera: RefCamera }) {
+  const m = camera.match!
+  const dh = ((m.headingDeg - camera.bearingDeg + 540) % 360) - 180
+  return (
+    <div className="note" style={{ marginTop: 12 }}>
+      <b>Matched</b> {m.at.slice(0, 10)}, fit {FIT_WORD[m.fit].toLowerCase()}: heading{' '}
+      <span className="mono">{m.headingDeg.toFixed(1)}&deg;</span> ({signed(dh)}&deg; from the recorded bearing), tilt{' '}
+      <span className="mono">{signed(m.pitchDeg)}&deg;</span>, field of view <span className="mono">{m.fovDeg.toFixed(0)}&deg;</span>
+      {camera.fovDeg !== undefined ? ` (recorded ${camera.fovDeg}°)` : ''}, eye height <span className="mono">{m.eyeM.toFixed(1)} m</span>.
+      {m.note ? <> {m.note}</> : null}
+      <div style={{ marginTop: 6 }}>
+        <button className="btn btn-sm btn-ghost btn-danger" onClick={() => useStore.getState().clearMatch(camera.id)}>
+          Clear the match
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function Slider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  unit: string
+  onChange: (v: number) => void
+}) {
+  return (
+    <Field label={label}>
+      <div className="slider-row">
+        <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} aria-label={label} />
+        <span className="mono">
+          {value.toFixed(step < 1 ? 1 : 0)}
+          {unit}
+        </span>
+      </div>
+    </Field>
+  )
+}
+
+/**
+ * The camera match: with the photograph laid over the model seen from the
+ * camera, adjust the pose until the model's edges sit on the photograph's, then
+ * save it with a judged fit. The recorded vantage is never changed here.
+ */
+function CameraMatchFields({ camera }: { camera: RefCamera }) {
+  const d = useStore((s) => s.matchDraft)
+  const opacity = useStore((s) => s.overlayOpacity)
+  const [fit, setFit] = useState<'close' | 'approximate' | 'poor'>(camera.match?.fit ?? 'approximate')
+  const [note, setNote] = useState(camera.match?.note ?? '')
+  if (!d) return null
+  const set = useStore.getState().setMatchDraft
+  return (
+    <>
+      <div className="divider" />
+      <span className="label">Camera match</span>
+      <p className="faint" style={{ fontSize: 13, margin: '4px 0 8px' }}>
+        {camera.photo
+          ? 'The photograph is laid over the model as seen from this camera. Adjust the pose until the model\'s edges sit on the photograph\'s.'
+          : 'The source file did not hold this photograph, so there is nothing to lay over the model. Bring in a project file that holds it to match the camera.'}
+      </p>
+      {camera.photo && (
+        <Slider label="Photograph" value={opacity} min={0} max={1} step={0.05} unit="" onChange={(v) => useStore.getState().setOverlayOpacity(v)} />
+      )}
+      <Slider label="Heading" value={d.headingDeg} min={camera.bearingDeg - 20} max={camera.bearingDeg + 20} step={0.1} unit="°" onChange={(v) => set({ headingDeg: v })} />
+      <Slider label="Tilt" value={d.pitchDeg} min={-30} max={30} step={0.1} unit="°" onChange={(v) => set({ pitchDeg: v })} />
+      <Slider label="Field of view" value={d.fovDeg} min={5} max={120} step={0.5} unit="°" onChange={(v) => set({ fovDeg: v })} />
+      <Slider label="Eye height" value={d.eyeM} min={0} max={40} step={0.1} unit=" m" onChange={(v) => set({ eyeM: v })} />
+      <Field label="Fit" hint="Your judgement of how well the model's edges sit on the photograph's.">
+        <div className="seg" role="group" aria-label="fit">
+          {(['close', 'approximate', 'poor'] as const).map((f) => (
+            <button key={f} type="button" aria-pressed={fit === f} onClick={() => setFit(f)}>
+              {FIT_WORD[f]}
+            </button>
+          ))}
+        </div>
+      </Field>
+      <Field label="Note">
+        <input className="input" value={note} placeholder="What lined up, what did not" onChange={(e) => setNote(e.target.value)} />
+      </Field>
+      <div className="btn-row">
+        <button className="btn btn-sm btn-primary" disabled={!camera.photo} onClick={() => useStore.getState().saveMatch(camera.id, fit, note)}>
+          Save the match
+        </button>
+        <button
+          className="btn btn-sm btn-ghost"
+          onClick={() =>
+            set({
+              headingDeg: camera.bearingDeg,
+              pitchDeg: 0,
+              fovDeg: camera.fovDeg ?? 50,
+              eyeM: useStore.getState().project.testimony.cameraEyeHeightM ?? 1.6,
+            })
+          }
+        >
+          Reset to the recorded vantage
+        </button>
+      </div>
+      {camera.match && <MatchSummary camera={camera} />}
+    </>
   )
 }

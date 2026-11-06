@@ -40,6 +40,7 @@ one click away when even that is unwanted.
   - [Georeferencing the model](#georeferencing-the-model)
   - [Cameras from Sightlines and Atlas](#cameras-from-sightlines-and-atlas)
   - [Looking through a camera](#looking-through-a-camera)
+  - [The camera match](#the-camera-match)
 - [The recording transport](#the-recording-transport)
 - [The three views](#the-three-views)
 - [The map: basemap, search, and measure](#the-map-basemap-search-and-measure)
@@ -392,6 +393,28 @@ Select a camera and press **Look through**: the 3D view stands where the camera
 stood, faces where it faced, and sees as wide as it saw. This is the model seen
 from the photograph's vantage, which is where a testimony about what could be
 seen from there can be tested. **Return to orbit** gives the view back.
+
+### The camera match
+
+When the project file held the photograph itself, Situated Testimony keeps it
+with the camera, and looking through lays it over the model at the opacity you
+set. If the recorded vantage is right, the model's edges sit on the
+photograph's; if not, the two read as a double image. This is the camera match
+that put a wireframe over a historic photograph at the Irving trial (van Pelt
+2014, 151 to 155).
+
+Under **Camera match**, adjust the **Heading**, **Tilt**, **Field of view**, and
+**Eye height** until the model and the photograph agree, judge the **Fit** (close,
+approximate, or poor), add a note on what lined up and what did not, and **Save
+the match**. The saved match is shown against the recorded vantage, for example
+"heading 303.9° (-5.0° from the recorded bearing)", so a disagreement between the
+two is itself on the record. The recorded vantage is never changed here; **Reset
+to the recorded vantage** returns to it, and a correction belongs back in
+Sightlines or Atlas.
+
+The match, like the camera and its photograph, is working reference and is never
+published. A camera brought in without its photograph can be looked through but
+not matched.
 
 ---
 

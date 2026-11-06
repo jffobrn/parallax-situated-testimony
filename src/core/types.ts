@@ -244,6 +244,26 @@ export interface RefCamera {
   /** The source's consent in its own tool, carried for the operator's eye. */
   consent: Consent
   safeToPublish: boolean
+  /** The photograph itself, when the source file held it: kept for the camera match. */
+  photo?: { blobKey: string; mime: string; sha256: string }
+  /** The pose found by matching the model to the photograph, if one was saved. */
+  match?: CameraMatch
+}
+
+/**
+ * A camera pose refined by laying the photograph over the model, seen from the
+ * camera, and adjusting until the model's edges sit on the photograph's. The fit
+ * is the operator's judgement, recorded as such, beside the recorded vantage.
+ */
+export interface CameraMatch {
+  headingDeg: number
+  pitchDeg: number
+  fovDeg: number
+  eyeM: number
+  fit: 'close' | 'approximate' | 'poor'
+  note?: string
+  /** When it was saved (ISO). */
+  at: string
 }
 
 /** The cameras read from one project file, tethered to it by its hash. */

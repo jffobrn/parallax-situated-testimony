@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Edges, Html, Line, OrbitControls, useGLTF } from '@react-three/drei'
@@ -84,9 +84,14 @@ export function ModelView() {
         <ambientLight intensity={0.45} />
         <gridHelper key={`g-${C.gridMajor}-${C.gridMinor}`} args={[80, 40, C.gridMajor, C.gridMinor]} position={[0, 0, 0]} />
 
-        <Suspense fallback={null}>
-          <Scene model={model} placing={placingHere} colours={C} />
-        </Suspense>
+        <ModelErrorBoundary
+          resetKey={`${model?.file?.blobKey ?? ''}|${model?.url ?? ''}`}
+          fallback={<ProceduralScene placing={placingHere} colours={C} />}
+        >
+          <Suspense fallback={null}>
+            <Scene model={model} placing={placingHere} colours={C} />
+          </Suspense>
+        </ModelErrorBoundary>
 
         <Anchors colours={C} />
         <Cameras colours={C} />
@@ -117,6 +122,7 @@ export function ModelView() {
           </button>
         </div>
       )}
+      {looking && looking.camera.photo && <PhotoOverlay blobKey={looking.camera.photo.blobKey} />}
       {looking && !placingHere && (
         <div className="map-banner">
           <span title={`From ${looking.set.title}`}>
@@ -137,6 +143,30 @@ export function ModelView() {
       </div>
     </>
   )
+}
+
+/**
+ * A model that fails to load (a broken or non-glTF file, an unreachable URL)
+ * must not take the whole tool down: show the procedural massing instead and
+ * say why. A different model resets it.
+ */
+class ModelErrorBoundary extends Component<
+  { resetKey: string; fallback: ReactNode; children: ReactNode },
+  { failed: boolean; key: string }
+> {
+  state = { failed: false, key: this.props.resetKey }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  static getDerivedStateFromProps(props: { resetKey: string }, state: { failed: boolean; key: string }) {
+    return props.resetKey !== state.key ? { failed: false, key: props.resetKey } : null
+  }
+  componentDidCatch() {
+    useStore.getState().notify('That model could not be loaded; showing the procedural massing instead.')
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children
+  }
 }
 
 /** Apply a placement click on any scene surface. */
@@ -351,6 +381,22 @@ function AnchorMarker({
   )
 }
 
+/**
+ * The camera's own photograph laid over the model seen from it. The image spans
+ * the view's full width, because the camera's field of view is horizontal, so
+ * when the pose is right the model's edges sit on the photograph's.
+ */
+function PhotoOverlay({ blobKey }: { blobKey: string }) {
+  const url = useMediaUrl(blobKey)
+  const opacity = useStore((s) => s.overlayOpacity)
+  if (!url) return null
+  return (
+    <div className="photo-overlay" aria-hidden="true">
+      <img src={url} alt="" style={{ opacity }} />
+    </div>
+  )
+}
+
 /** Where an imported camera stands in model space, and which way it looks. */
 export function cameraPose(g: ModelGeoref, cam: RefCamera, eyeM: number) {
   const p = geoToModel(g, cam)
@@ -466,8 +512,15 @@ function CameraRig() {
       const g = effectiveGeoref(st.project.testimony)
       const hit = allCameras(st.project.testimony).find((c) => c.camera.id === lookId)
       if (g && hit && lookControls?.target) {
-        const { pos, dir } = cameraPose(g, hit.camera, st.project.testimony.cameraEyeHeightM ?? 1.6)
+        // The pose being matched, or the recorded one.
+        const d = st.matchDraft
+        const eye = d?.eyeM ?? st.project.testimony.cameraEyeHeightM ?? 1.6
+        const posed = d ? { ...hit.camera, bearingDeg: d.headingDeg, fovDeg: d.fovDeg } : hit.camera
+        const { pos, dir } = cameraPose(g, posed, eye)
+        const pitch = ((d?.pitchDeg ?? 0) * Math.PI) / 180
+        dir.multiplyScalar(Math.cos(pitch)).setY(Math.sin(pitch))
         const target = pos.clone().add(dir.multiplyScalar(metresToUnits(g, 30)))
+        hit.camera = posed
         cam.position.lerp(pos, lastLook.current === lookId ? 0.25 : 0.12)
         lookControls.target.lerp(target, lastLook.current === lookId ? 0.25 : 0.12)
         const hfov = (hit.camera.fovDeg ?? 50) * (Math.PI / 180)

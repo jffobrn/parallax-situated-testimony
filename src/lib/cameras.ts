@@ -6,7 +6,7 @@
  * field is read defensively.
  */
 
-import { newId, sha256Hex, type CameraSet, type Certainty, type Consent, type ModelGeoref, type RefCamera } from '../core'
+import { newId, putMedia, sha256Hex, type CameraSet, type Certainty, type Consent, type ModelGeoref, type RefCamera } from '../core'
 
 interface Loose {
   [k: string]: unknown
@@ -24,7 +24,9 @@ function firstText(v: unknown): string {
 }
 
 /** The cameras in a parsed project file, or an error message. */
-export function camerasFromProjectFile(json: unknown): { tool: CameraSet['tool']; title: string; cameras: RefCamera[] } | string {
+export function camerasFromProjectFile(
+  json: unknown,
+): { tool: CameraSet['tool']; title: string; cameras: RefCamera[]; photoKeys: Map<string, string> } | string {
   const file = obj(json)
   const format = file.format
   const project = obj(file.project)
@@ -43,6 +45,8 @@ export function camerasFromProjectFile(json: unknown): { tool: CameraSet['tool']
     return 'Not a Sightlines or Atlas project file.'
   }
   const cameras: RefCamera[] = []
+  // camera id -> the source file's own blobKey for its photograph
+  const photoKeys = new Map<string, string>()
   for (const it of items) {
     const v = obj(it.vantage)
     const lat = num(v.lat)
@@ -51,8 +55,11 @@ export function camerasFromProjectFile(json: unknown): { tool: CameraSet['tool']
     if (lat === null || lng === null || bearingDeg === null) continue
     const consent = CONSENTS.includes(it.consent as Consent) ? (it.consent as Consent) : 'restricted'
     const confidence = CERTAINTIES.includes(v.confidence as Certainty) ? (v.confidence as Certainty) : 'uncertain'
+    const id = newId('cam')
+    const bk = obj(it.file).blobKey
+    if (typeof bk === 'string') photoKeys.set(id, bk)
     cameras.push({
-      id: newId('cam'),
+      id,
       label: typeof it.title === 'string' && it.title.trim() ? it.title : 'Untitled photograph',
       lat,
       lng,
@@ -64,7 +71,7 @@ export function camerasFromProjectFile(json: unknown): { tool: CameraSet['tool']
     })
   }
   if (cameras.length === 0) return 'That project has no placed camera vantages.'
-  return { tool, title, cameras }
+  return { tool, title, cameras, photoKeys }
 }
 
 /** Read a picked file into a camera set, hashing its bytes for fixity. */
@@ -78,6 +85,17 @@ export async function cameraSetFromFile(file: File): Promise<CameraSet | string>
   }
   const read = camerasFromProjectFile(json)
   if (typeof read === 'string') return read
+  // Keep each camera's photograph when the file held it, for the camera match.
+  const media = obj(obj(json).media)
+  for (const cam of read.cameras) {
+    const key = read.photoKeys.get(cam.id)
+    const m = key ? obj(media[key]) : {}
+    if (typeof m.base64 !== 'string' || typeof m.mime !== 'string' || !m.mime.startsWith('image/')) continue
+    const bin = Uint8Array.from(atob(m.base64), (c) => c.charCodeAt(0))
+    const blobKey = `camphoto_${cam.id}`
+    await putMedia(blobKey, new Blob([bin], { type: m.mime }))
+    cam.photo = { blobKey, mime: m.mime, sha256: await sha256Hex(bin.buffer) }
+  }
   return {
     id: newId('camset'),
     tool: read.tool,

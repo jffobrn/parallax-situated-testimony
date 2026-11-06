@@ -19,6 +19,7 @@ import {
   type GeoPoint,
   type ModelAnchor,
   type Narrator,
+  type CameraMatch,
   type CameraSet,
   type Project,
   type Recording,
@@ -63,6 +64,10 @@ export interface AppState {
   /** The camera the 3D view is looking through, if any. */
   lookThroughId: string | null
   georefMatch: GeorefMatch | null
+  /** The pose being adjusted while looking through a camera (not yet saved). */
+  matchDraft: Omit<CameraMatch, 'fit' | 'note' | 'at'> | null
+  /** Opacity of the photograph laid over the model while looking through. */
+  overlayOpacity: number
   hoveredId: string | null
   editingStatementId: string | null
 
@@ -128,6 +133,10 @@ export interface AppState {
   addCameraSet: (set: CameraSet) => void
   removeCameraSet: (id: string) => void
   setEyeHeight: (m: number) => void
+  setMatchDraft: (partial: Partial<Omit<CameraMatch, 'fit' | 'note' | 'at'>>) => void
+  setOverlayOpacity: (v: number) => void
+  saveMatch: (cameraId: string, fit: CameraMatch['fit'], note?: string) => void
+  clearMatch: (cameraId: string) => void
   startGeorefMatch: () => void
   cancelGeorefMatch: () => void
 }
@@ -182,6 +191,8 @@ export const useStore = create<AppState>()((set, get) => {
     selectedCameraId: null,
     lookThroughId: null,
     georefMatch: null,
+    matchDraft: null,
+    overlayOpacity: 0.5,
     hoveredId: null,
     editingStatementId: null,
 
@@ -419,8 +430,46 @@ export const useStore = create<AppState>()((set, get) => {
       set({ selectedCameraId: id, selectedStatementId: null, selectedNarratorId: null })
     },
     setLookThrough(id) {
-      set({ lookThroughId: id })
-      if (id) set({ view: 'model' })
+      if (!id) {
+        set({ lookThroughId: null, matchDraft: null })
+        return
+      }
+      const t = get().project.testimony
+      const cam = (t.cameraSets ?? []).flatMap((c) => c.cameras).find((c) => c.id === id)
+      const eye = t.cameraEyeHeightM ?? 1.6
+      const draft = cam
+        ? cam.match
+          ? { headingDeg: cam.match.headingDeg, pitchDeg: cam.match.pitchDeg, fovDeg: cam.match.fovDeg, eyeM: cam.match.eyeM }
+          : { headingDeg: cam.bearingDeg, pitchDeg: 0, fovDeg: cam.fovDeg ?? 50, eyeM: eye }
+        : null
+      set({ lookThroughId: id, view: 'model', matchDraft: draft })
+    },
+    setMatchDraft(partial) {
+      const d = get().matchDraft
+      if (d) set({ matchDraft: { ...d, ...partial } })
+    },
+    setOverlayOpacity(v) {
+      set({ overlayOpacity: v })
+    },
+    saveMatch(cameraId, fit, note) {
+      const d = get().matchDraft
+      if (!d) return
+      const p = get().project
+      const match: CameraMatch = { ...d, fit, note: note?.trim() || undefined, at: new Date().toISOString() }
+      const sets = (p.testimony.cameraSets ?? []).map((cs) => ({
+        ...cs,
+        cameras: cs.cameras.map((c) => (c.id === cameraId ? { ...c, match } : c)),
+      }))
+      commit({ ...p, testimony: { ...p.testimony, cameraSets: sets } })
+      get().notify('Camera match saved.')
+    },
+    clearMatch(cameraId) {
+      const p = get().project
+      const sets = (p.testimony.cameraSets ?? []).map((cs) => ({
+        ...cs,
+        cameras: cs.cameras.map((c) => (c.id === cameraId ? { ...c, match: undefined } : c)),
+      }))
+      commit({ ...p, testimony: { ...p.testimony, cameraSets: sets } })
     },
     addCameraSet(cs) {
       const p = get().project

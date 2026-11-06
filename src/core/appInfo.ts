@@ -1,7 +1,7 @@
 /** App identity and the standing disclaimers, in one place (shared core). */
 
 export const APP_NAME = 'Situated Testimony'
-export const APP_VERSION = '1.6.0'
+export const APP_VERSION = '1.7.0'
 export const SUITE_NAME = 'Parallax'
 
 export const TAGLINE =

@@ -34,11 +34,12 @@ function base64ToBlob(base64: string, mime: string): Blob {
   return new Blob([bytes], { type: mime })
 }
 
-/** Every blobKey the project references (the recording and the model). */
+/** Every blobKey the project references (the recording, the model, and camera photographs). */
 function projectBlobKeys(project: Project): string[] {
   return [
     project.testimony.recording?.file?.blobKey,
     project.testimony.model?.file?.blobKey,
+    ...(project.testimony.cameraSets ?? []).flatMap((cs) => cs.cameras.map((c) => c.photo?.blobKey)),
   ].filter((k): k is string => typeof k === 'string')
 }
 
